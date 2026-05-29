@@ -4245,3 +4245,179 @@ th,
     align-items: flex-start !important;
   }
 }
+
+/* Final business-flow refinements */
+.dashboard-panels {
+  align-items: stretch !important;
+}
+
+.compact-list {
+  display: grid !important;
+  gap: 10px !important;
+}
+
+.compact-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 12px !important;
+  min-height: 46px !important;
+  padding: 10px 12px !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 12px !important;
+  background: rgba(13, 24, 46, 0.82) !important;
+}
+
+.compact-title {
+  justify-self: start !important;
+  font-weight: 750 !important;
+}
+
+.compact-row span {
+  color: var(--muted) !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.period-controls {
+  display: flex !important;
+  align-items: end !important;
+  gap: 10px !important;
+  flex-wrap: wrap !important;
+  justify-content: flex-end !important;
+}
+
+.period-controls label {
+  min-width: 150px !important;
+  margin: 0 !important;
+}
+
+.period-pill {
+  min-height: 38px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 0 12px !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 12px !important;
+  color: var(--muted) !important;
+  background: rgba(13, 24, 46, 0.78) !important;
+}
+
+.finance-pie-layout {
+  display: grid !important;
+  grid-template-columns: 180px 1fr !important;
+  gap: 24px !important;
+  align-items: center !important;
+}
+
+.finance-pie {
+  width: 180px !important;
+  aspect-ratio: 1 !important;
+  border-radius: 50% !important;
+  display: grid !important;
+  place-items: center !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: inset 0 0 0 18px rgba(6, 13, 27, 0.86) !important;
+}
+
+.finance-pie span {
+  width: 92px !important;
+  aspect-ratio: 1 !important;
+  border-radius: 50% !important;
+  display: grid !important;
+  place-items: center !important;
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  font-weight: 800 !important;
+}
+
+.finance-legend {
+  display: grid !important;
+  gap: 10px !important;
+}
+
+.legend-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  padding: 10px 12px !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 12px !important;
+  background: rgba(13, 24, 46, 0.72) !important;
+}
+
+.legend-row span {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  color: var(--muted) !important;
+}
+
+.legend-row i {
+  width: 10px !important;
+  height: 10px !important;
+  border-radius: 999px !important;
+  display: inline-block !important;
+}
+
+.legend-row small {
+  color: var(--muted) !important;
+  font-weight: 700 !important;
+}
+
+.payment-suggestions {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  align-items: center !important;
+  padding: 10px !important;
+  border: 1px dashed var(--line) !important;
+  border-radius: 12px !important;
+  background: rgba(13, 24, 46, 0.58) !important;
+}
+
+.chip-button {
+  border: 1px solid var(--line) !important;
+  border-radius: 999px !important;
+  background: rgba(255, 122, 26, 0.12) !important;
+  color: var(--ink) !important;
+  padding: 9px 12px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+}
+
+.chip-button:hover {
+  border-color: rgba(255, 122, 26, 0.72) !important;
+  color: var(--orange) !important;
+}
+
+select[data-project-status-change],
+select[data-status-change] {
+  color: var(--ink) !important;
+  background-color: #101b33 !important;
+  border-color: var(--line) !important;
+}
+
+@media (max-width: 760px) {
+  .compact-row,
+  .finance-pie-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .finance-pie {
+    width: 150px !important;
+    justify-self: center !important;
+  }
+
+  .period-controls {
+    justify-content: stretch !important;
+  }
+
+  .period-controls label,
+  .period-controls select,
+  .period-controls input {
+    width: 100% !important;
+  }
+}

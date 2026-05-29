@@ -10,6 +10,7 @@
   let cloudSaveTimer = null;
   let cloudSaving = false;
   let cloudSavePending = false;
+  let routeHistory = [];
 
   const statusLabels = {
     pendente: "Pendente",
@@ -31,8 +32,13 @@
     route: "dashboard",
     activeClientId: null,
     activeQuoteId: null,
+    activeProjectId: null,
+    activeQuoteTab: "summary",
     activeStatus: null,
     quotesStatusOpen: false,
+    financePeriod: "month",
+    financeStart: "",
+    financeEnd: "",
     clients: [],
     materials: [],
     quotes: [],
@@ -52,10 +58,14 @@
       phone: "+55 (81) 98269-1798",
       address: "Belo Jardim - PE",
       pix: "",
+      pixType: "Chave PIX",
       bank: "",
       agency: "",
       account: "",
       holder: "",
+      acceptsCreditCard: "false",
+      cardInstallments: "3",
+      cardFeePct: "0",
       defaultTerms: "Orçamento válido conforme prazo informado.",
     },
     costSettings: {
@@ -64,6 +74,8 @@
       laborRoles: [
         { id: uid(), role: "Serralheiro", dailyRate: 0 },
         { id: uid(), role: "Soldador", dailyRate: 0 },
+        { id: uid(), role: "Pedreiro", dailyRate: 0 },
+        { id: uid(), role: "Servente", dailyRate: 0 },
         { id: uid(), role: "Ajudante de serralheria", dailyRate: 0 },
         { id: uid(), role: "Encarregado", dailyRate: 0 },
       ],
@@ -274,6 +286,17 @@
     state.users = state.users && state.users.length ? state.users : clone(defaultState.users);
     state.costSettings = mergeDefaults(defaultState.costSettings, state.costSettings || {});
     state.settings = mergeDefaults(defaultState.settings, state.settings || {});
+    ensureDefaultLaborRoles();
+    state.financePeriod = state.financePeriod || "month";
+  }
+
+  function ensureDefaultLaborRoles() {
+    const requiredRoles = ["Serralheiro", "Soldador", "Pedreiro", "Servente", "Ajudante de serralheria", "Encarregado"];
+    state.costSettings.laborRoles = Array.isArray(state.costSettings.laborRoles) ? state.costSettings.laborRoles : [];
+    requiredRoles.forEach((role) => {
+      const exists = state.costSettings.laborRoles.some((item) => String(item.role || "").toLowerCase() === role.toLowerCase());
+      if (!exists) state.costSettings.laborRoles.push({ id: uid(), role, dailyRate: 0 });
+    });
   }
 
   function applyEmbeddedImport() {
@@ -567,12 +590,12 @@
   }
 
   function codeForNextQuote() {
-    const year = new Date().getFullYear();
+    const prefix = today().replaceAll("-", "");
     const max = state.quotes.reduce((highest, q) => {
-      const match = String(q.code || "").match(new RegExp(`^ORC-${year}-(\\d+)$`));
+      const match = String(q.code || "").match(new RegExp(`^${prefix}-(\\d+)$`));
       return match ? Math.max(highest, Number(match[1])) : highest;
     }, 0);
-    return `ORC-${year}-${String(max + 1).padStart(4, "0")}`;
+    return `${prefix}-${String(max + 1).padStart(4, "0")}`;
   }
 
   function displayQuoteCode(code) {
@@ -590,9 +613,36 @@
     return date && date >= start && date <= end;
   }
 
-  function routeTo(route, params = {}) {
+  function routeSnapshot() {
+    return {
+      route: state.route,
+      activeClientId: state.activeClientId,
+      activeQuoteId: state.activeQuoteId,
+      activeProjectId: state.activeProjectId,
+      activeQuoteTab: state.activeQuoteTab,
+      activeStatus: state.activeStatus,
+      quotesStatusOpen: state.quotesStatusOpen,
+    };
+  }
+
+  function routeTo(route, params = {}, options = {}) {
+    if (!options.replace && state.logged && state.route && state.route !== route) {
+      routeHistory.push(routeSnapshot());
+      if (routeHistory.length > 20) routeHistory = routeHistory.slice(-20);
+    }
     state.route = route;
     Object.assign(state, params);
+    save();
+    render();
+  }
+
+  function goBack() {
+    const previous = routeHistory.pop();
+    if (!previous) {
+      routeTo("dashboard", {}, { replace: true });
+      return;
+    }
+    Object.assign(state, previous);
     save();
     render();
   }
@@ -760,6 +810,7 @@
       case "quotes": return renderQuotes();
       case "quoteDetail": return renderQuoteDetail();
       case "projects": return renderProjects();
+      case "projectDetail": return renderProjectDetail();
       case "materials": return renderMaterials();
       case "finance": return renderFinance();
       case "time": return renderTime();
@@ -804,7 +855,7 @@
       btn.addEventListener("click", () => openQuoteModal());
     });
     document.querySelectorAll("[data-action='back']").forEach((btn) => {
-      btn.addEventListener("click", () => routeTo("dashboard"));
+      btn.addEventListener("click", () => goBack());
     });
   }
 
@@ -827,6 +878,7 @@
           <article class="card dashboard-link ${balance < 0 ? "red" : "green"}" data-route="finance" role="button" tabindex="0"><span>Saldo do mês</span><strong>${money(balance)}</strong><small>Receitas menos saídas</small></article>
           <article class="card dashboard-link green" data-route="projects" role="button" tabindex="0"><span>Projetos ativos</span><strong>${activeProjects}</strong><small>Em execução ou pendentes</small></article>
         </div>
+        <div class="two-col dashboard-panels">
         <section class="panel dashboard-status">
           <div class="panel-head">
             <div><p class="eyebrow">Pedidos</p><h2>Orçamentos por status</h2></div>
@@ -834,7 +886,35 @@
           </div>
           ${renderStatusList()}
         </section>
+        <section class="panel">
+          <div class="panel-head"><div><p class="eyebrow">Obras</p><h2>Últimos projetos / Em andamento</h2></div></div>
+          ${renderDashboardProjects()}
+        </section>
+        </div>
       </section>
+    `;
+  }
+
+  function renderDashboardProjects() {
+    const projects = state.projects
+      .filter((p) => !["concluido", "cancelado"].includes(p.status))
+      .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
+      .slice(0, 6);
+    if (!projects.length) return empty("Nenhum projeto em andamento.", "Projetos aprovados aparecem aqui para acompanhamento rápido.");
+    return `
+      <div class="compact-list">
+        ${projects.map((project) => {
+          const client = getClient(project.clientId);
+          const result = projectResult(project.id);
+          return `
+            <div class="compact-row">
+              <button class="clickable compact-title" data-project-id="${project.id}">${esc(project.title)}</button>
+              <span>${client ? esc(client.name) : "Sem cliente"}</span>
+              <strong>${money(result.sold)}</strong>
+            </div>
+          `;
+        }).join("")}
+      </div>
     `;
   }
 
@@ -958,7 +1038,7 @@
         </div>
         <section class="panel">
           <div class="panel-head"><div><p class="eyebrow">Histórico</p><h2>Projetos e orçamentos</h2></div></div>
-          ${quotes.length ? renderQuoteTable(quotes) : empty("Nenhum projeto cadastrado para este cliente.", "Crie o primeiro orçamento para iniciar o histórico.")}
+          ${projects.length ? renderProjectTable(projects) : quotes.length ? renderQuoteTable(quotes) : empty("Nenhum projeto cadastrado para este cliente.", "Crie o primeiro orçamento para iniciar o histórico.")}
         </section>
       </section>
     `;
@@ -1159,10 +1239,10 @@
               const result = projectResult(p.id);
               return `
                 <tr>
-                  <td>${esc(p.title)}</td>
+                  <td><button class="clickable" data-project-id="${p.id}">${esc(p.title)}</button></td>
                   <td>${client ? `<button class="clickable" data-client-id="${client.id}">${esc(client.name)}</button>` : ""}</td>
-                  <td><span class="badge"><span class="dot ${p.status}"></span>${statusLabels[p.status] || p.status}</span></td>
-                  <td>${money(result.sold)}</td>
+                  <td><select data-project-status-change="${p.id}">${statusOrder.map((s) => `<option value="${s}" ${p.status === s ? "selected" : ""}>${statusLabels[s]}</option>`).join("")}</select></td>
+                  <td>${p.quoteId ? `<button class="clickable" data-quote-id="${p.quoteId}">${money(result.sold)}</button>` : money(result.sold)}</td>
                   <td>${money(result.costs)}</td>
                   <td class="${result.profit < 0 ? "danger-text" : ""}">${money(result.profit)}</td>
                 </tr>
@@ -1174,43 +1254,186 @@
     `;
   }
 
-  function renderFinance() {
-    const range = currentMonthRange();
-    const received = state.receivables.filter((r) => r.status === "recebido" && inRange(r.receivedAt || r.dueDate, range.start, range.end)).reduce((s, r) => s + parseNum(r.amount), 0);
-    const toReceive = state.receivables.filter((r) => r.status !== "recebido" && r.status !== "cancelado").reduce((s, r) => s + parseNum(r.amount), 0);
-    const expenses = state.expenses.filter((e) => inRange(e.paidAt || e.dueDate || e.date, range.start, range.end)).reduce((s, e) => s + parseNum(e.amount), 0);
+  function renderProjectDetail() {
+    const project = getProject(state.activeProjectId);
+    if (!project) return empty("Projeto não encontrado.", "Volte para a lista de projetos.");
+    const client = getClient(project.clientId);
+    const quote = getQuote(project.quoteId);
+    const result = projectResult(project.id);
+    const receivables = state.receivables.filter((r) => r.projectId === project.id || r.quoteId === project.quoteId);
+    const expenses = state.expenses.filter((e) => e.projectId === project.id);
     return `
       <section class="grid">
-        ${pageHeader("Financeiro", "Entradas, valores a receber e despesas da empresa.")}
-        <div class="kpis">
-          <article class="card green"><span>Recebido</span><strong>${money(received)}</strong><small>Mês atual</small></article>
-          <article class="card orange"><span>A receber</span><strong>${money(toReceive)}</strong><small>Previsões abertas</small></article>
-          <article class="card red"><span>Despesas</span><strong>${money(expenses)}</strong><small>Fixas e variáveis</small></article>
-          <article class="card"><span>Saldo</span><strong>${money(received - expenses)}</strong><small>Recebido - despesas</small></article>
+        <div class="client-header">
+          <div>
+            <p class="eyebrow">Projeto / Obra</p>
+            <h2>${esc(project.title)}</h2>
+            <div class="meta-list">
+              ${client ? `<button class="clickable" data-client-id="${client.id}">${esc(client.name)}</button>` : "<span>Sem cliente</span>"}
+              ${quote ? `<button class="clickable" data-quote-id="${quote.id}">${esc(displayQuoteCode(quote.code))}</button>` : ""}
+            </div>
+          </div>
+          <div class="actions">
+            ${quote ? `<button class="btn" data-quote-id="${quote.id}">Abrir orçamento</button>` : ""}
+          </div>
         </div>
+        <div class="kpis">
+          <article class="card orange"><span>Vendido</span><strong>${money(result.sold)}</strong><small>Valor aprovado</small></article>
+          <article class="card green"><span>Recebido</span><strong>${money(result.received)}</strong><small>Baixado no financeiro</small></article>
+          <article class="card red"><span>Custos</span><strong>${money(result.costs)}</strong><small>Base interna + despesas</small></article>
+          <article class="card ${result.profit < 0 ? "red" : "green"}"><span>Resultado</span><strong>${money(result.profit)}</strong><small>Entradas previstas - custos</small></article>
+        </div>
+        <section class="panel">
+          <div class="panel-head">
+            <div><p class="eyebrow">Status</p><h2>Acompanhamento</h2></div>
+            <select data-project-status-change="${project.id}">${statusOrder.map((s) => `<option value="${s}" ${project.status === s ? "selected" : ""}>${statusLabels[s]}</option>`).join("")}</select>
+          </div>
+          <p class="muted">O projeto mantém o valor aprovado do orçamento congelado. Alterações futuras de materiais não mudam este resultado.</p>
+        </section>
         <div class="two-col">
           <section class="panel">
-            <div class="panel-head"><div><p class="eyebrow">Contas</p><h2>A receber</h2></div><button class="btn-secondary" data-action="export-receivables">Exportar CSV</button></div>
-            ${state.receivables.length ? renderReceivablesTable() : empty("Nenhuma conta a receber.", "Ao aprovar um orçamento, o sistema cria a previsão automaticamente.")}
+            <div class="panel-head"><div><p class="eyebrow">Financeiro</p><h2>Recebimentos</h2></div></div>
+            <div class="table-wrap"><table><thead><tr><th>Descrição</th><th>Vencimento</th><th>Status</th><th>Valor</th></tr></thead><tbody>
+              ${receivables.map((r) => `<tr><td>${esc(r.description)}</td><td>${brDate(r.dueDate)}</td><td>${esc(r.status)}</td><td>${money(r.amount)}</td></tr>`).join("") || `<tr><td colspan="4">Nenhum recebimento vinculado.</td></tr>`}
+            </tbody></table></div>
           </section>
           <section class="panel">
-            <div class="panel-head"><div><p class="eyebrow">Empresa</p><h2>Despesas</h2></div><button class="btn" data-action="new-expense">Nova despesa</button></div>
-            ${state.expenses.length ? renderExpensesTable() : empty("Nenhuma despesa cadastrada.", "Lance custos fixos da empresa sem criar um cliente interno só para despesas.")}
+            <div class="panel-head"><div><p class="eyebrow">Custos</p><h2>Despesas da obra</h2></div><button class="btn" data-action="new-expense">Nova despesa</button></div>
+            <div class="table-wrap"><table><thead><tr><th>Categoria</th><th>Descrição</th><th>Data</th><th>Valor</th></tr></thead><tbody>
+              ${expenses.map((e) => `<tr><td>${esc(e.category)}</td><td>${esc(e.description)}</td><td>${brDate(e.date || e.dueDate)}</td><td>${money(e.amount)}</td></tr>`).join("") || `<tr><td colspan="4">Nenhuma despesa vinculada.</td></tr>`}
+            </tbody></table></div>
           </section>
         </div>
       </section>
     `;
   }
 
-  function renderReceivablesTable() {
+  function financeRange() {
+    const now = new Date();
+    const iso = (date) => date.toISOString().slice(0, 10);
+    const period = state.financePeriod || "month";
+    if (period === "previous_month") {
+      return {
+        start: iso(new Date(now.getFullYear(), now.getMonth() - 1, 1)),
+        end: iso(new Date(now.getFullYear(), now.getMonth(), 0)),
+      };
+    }
+    if (period === "last_3_months") return { start: iso(new Date(now.getFullYear(), now.getMonth() - 2, 1)), end: iso(now) };
+    if (period === "year") return { start: `${now.getFullYear()}-01-01`, end: `${now.getFullYear()}-12-31` };
+    if (period === "previous_year") {
+      const year = now.getFullYear() - 1;
+      return { start: `${year}-01-01`, end: `${year}-12-31` };
+    }
+    if (period === "custom") {
+      const fallback = currentMonthRange();
+      return { start: state.financeStart || fallback.start, end: state.financeEnd || fallback.end };
+    }
+    return currentMonthRange();
+  }
+
+  function financeBreakdown(range) {
+    const receivablesInPeriod = state.receivables.filter((r) => inRange(r.receivedAt || r.dueDate || r.createdAt, range.start, range.end));
+    const expensesInPeriod = state.expenses.filter((e) => inRange(e.paidAt || e.dueDate || e.date, range.start, range.end));
+    const received = receivablesInPeriod.filter((r) => r.status === "recebido").reduce((s, r) => s + parseNum(r.amount), 0);
+    const toReceive = receivablesInPeriod.filter((r) => r.status !== "recebido" && r.status !== "cancelado").reduce((s, r) => s + parseNum(r.amount), 0);
+    const projectCosts = expensesInPeriod.filter((e) => e.projectId && !e.fixed).reduce((s, e) => s + parseNum(e.amount), 0);
+    const fixedExpenses = expensesInPeriod.filter((e) => e.fixed).reduce((s, e) => s + parseNum(e.amount), 0);
+    const variableExpenses = expensesInPeriod.filter((e) => !e.fixed && !e.projectId).reduce((s, e) => s + parseNum(e.amount), 0);
+    return { receivablesInPeriod, expensesInPeriod, received, toReceive, projectCosts, fixedExpenses, variableExpenses };
+  }
+
+  function renderFinancePeriodControls(range) {
+    return `
+      <div class="period-controls">
+        <label>Período
+          <select data-finance-period>
+            <option value="month" ${state.financePeriod === "month" ? "selected" : ""}>Este mês</option>
+            <option value="previous_month" ${state.financePeriod === "previous_month" ? "selected" : ""}>Mês passado</option>
+            <option value="last_3_months" ${state.financePeriod === "last_3_months" ? "selected" : ""}>Últimos 3 meses</option>
+            <option value="year" ${state.financePeriod === "year" ? "selected" : ""}>Este ano</option>
+            <option value="previous_year" ${state.financePeriod === "previous_year" ? "selected" : ""}>Ano passado</option>
+            <option value="custom" ${state.financePeriod === "custom" ? "selected" : ""}>Personalizado</option>
+          </select>
+        </label>
+        ${state.financePeriod === "custom" ? `
+          <label>De<input type="date" value="${esc(range.start)}" data-finance-start></label>
+          <label>Até<input type="date" value="${esc(range.end)}" data-finance-end></label>
+        ` : `<span class="period-pill">${brDate(range.start)} até ${brDate(range.end)}</span>`}
+      </div>
+    `;
+  }
+
+  function renderFinancePie(data) {
+    const segments = [
+      { label: "Recebido", value: data.received, color: "#00c08b" },
+      { label: "A receber", value: data.toReceive, color: "#4ea1ff" },
+      { label: "Custos de obra", value: data.projectCosts, color: "#ff4d4d" },
+      { label: "Despesas fixas", value: data.fixedExpenses, color: "#ffb020" },
+      { label: "Custos e despesas variáveis", value: data.variableExpenses, color: "#ff7a1a" },
+    ];
+    const total = segments.reduce((sum, item) => sum + item.value, 0);
+    let cursor = 0;
+    const gradient = total
+      ? `conic-gradient(${segments.filter((segment) => segment.value > 0).map((segment) => {
+        const start = cursor;
+        cursor += (segment.value / total) * 100;
+        return `${segment.color} ${start}% ${cursor}%`;
+      }).join(", ")})`
+      : "conic-gradient(#27344f 0 100%)";
+    return `
+      <section class="panel finance-pie-panel">
+        <div class="panel-head"><div><p class="eyebrow">Distribuição</p><h2>Receitas, custos e despesas</h2></div></div>
+        <div class="finance-pie-layout">
+          <div class="finance-pie" style="background:${gradient}"><span>${total ? "100%" : "0%"}</span></div>
+          <div class="finance-legend">
+            ${segments.map((segment) => {
+              const pct = total ? (segment.value / total) * 100 : 0;
+              return `<div class="legend-row"><span><i style="background:${segment.color}"></i>${segment.label}</span><strong>${money(segment.value)} <small>${pct.toFixed(1)}%</small></strong></div>`;
+            }).join("")}
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
+  function renderFinance() {
+    const range = financeRange();
+    const data = financeBreakdown(range);
+    const costsAndExpenses = data.projectCosts + data.fixedExpenses + data.variableExpenses;
+    return `
+      <section class="grid">
+        ${pageHeader("Financeiro", "Entradas, valores a receber, custos e despesas da empresa.", renderFinancePeriodControls(range))}
+        <div class="kpis">
+          <article class="card green"><span>Recebido</span><strong>${money(data.received)}</strong><small>Baixado no período</small></article>
+          <article class="card orange"><span>A receber</span><strong>${money(data.toReceive)}</strong><small>Previsões no período</small></article>
+          <article class="card red"><span>Custos e despesas</span><strong>${money(costsAndExpenses)}</strong><small>Obra, variáveis e fixas</small></article>
+          <article class="card ${data.received - costsAndExpenses < 0 ? "red" : "green"}"><span>Resultado</span><strong>${money(data.received - costsAndExpenses)}</strong><small>Recebido - saídas</small></article>
+        </div>
+        ${renderFinancePie(data)}
+        <div class="two-col">
+          <section class="panel">
+            <div class="panel-head"><div><p class="eyebrow">Contas</p><h2>A receber</h2></div><button class="btn-secondary" data-action="export-receivables">Exportar CSV</button></div>
+            ${data.receivablesInPeriod.length ? renderReceivablesTable(data.receivablesInPeriod) : empty("Nenhuma conta a receber neste período.", "Ao aprovar um orçamento, o sistema cria a previsão automaticamente.")}
+          </section>
+          <section class="panel">
+            <div class="panel-head"><div><p class="eyebrow">Empresa</p><h2>Custos e despesas</h2></div><button class="btn" data-action="new-expense">Nova despesa</button></div>
+            ${data.expensesInPeriod.length ? renderExpensesTable(data.expensesInPeriod) : empty("Nenhum custo ou despesa neste período.", "Lance custos fixos da empresa sem criar um cliente interno só para despesas.")}
+          </section>
+        </div>
+      </section>
+    `;
+  }
+
+  function renderReceivablesTable(rows = state.receivables) {
     return `
       <div class="table-wrap">
         <table>
           <thead><tr><th>Cliente</th><th>Descrição</th><th>Vencimento</th><th>Status</th><th>Valor</th><th class="right">Ações</th></tr></thead>
           <tbody>
-            ${state.receivables.map((r) => {
+            ${rows.map((r) => {
               const c = getClient(r.clientId);
-              return `<tr><td>${esc(c ? c.name : "")}</td><td>${esc(r.description)}</td><td>${brDate(r.dueDate)}</td><td>${esc(r.status)}</td><td>${money(r.amount)}</td><td class="right action-cell">${r.status !== "recebido" ? `<button class="btn-secondary" data-receive="${r.id}">Receber</button>` : ""}<button class="icon-action" title="Editar conta" data-edit-receivable="${r.id}">✎</button><button class="icon-action danger" title="Excluir conta" data-delete-receivable="${r.id}">🗑</button></td></tr>`;
+              const description = r.quoteId ? `<button class="clickable" data-quote-id="${r.quoteId}">${esc(r.description)}</button>` : r.projectId ? `<button class="clickable" data-project-id="${r.projectId}">${esc(r.description)}</button>` : esc(r.description);
+              return `<tr><td>${c ? `<button class="clickable" data-client-id="${c.id}">${esc(c.name)}</button>` : ""}</td><td>${description}</td><td>${brDate(r.dueDate)}</td><td>${esc(r.status)}</td><td>${money(r.amount)}</td><td class="right action-cell">${r.status !== "recebido" ? `<button class="btn-secondary" data-receive="${r.id}">Receber</button>` : ""}<button class="icon-action" title="Editar conta" data-edit-receivable="${r.id}">✎</button><button class="icon-action danger" title="Excluir conta" data-delete-receivable="${r.id}">🗑</button></td></tr>`;
             }).join("")}
           </tbody>
         </table>
@@ -1218,13 +1441,13 @@
     `;
   }
 
-  function renderExpensesTable() {
+  function renderExpensesTable(rows = state.expenses) {
     return `
       <div class="table-wrap">
         <table>
           <thead><tr><th>Categoria</th><th>Descrição</th><th>Tipo</th><th>Data</th><th>Valor</th><th class="right">Ações</th></tr></thead>
           <tbody>
-            ${state.expenses.map((e) => `<tr><td>${esc(e.category)}</td><td>${esc(e.description)}</td><td>${e.fixed ? "Fixa" : "Variável"}</td><td>${brDate(e.date || e.dueDate)}</td><td>${money(e.amount)}</td><td class="right action-cell"><button class="icon-action" title="Editar despesa" data-edit-expense="${e.id}">✎</button><button class="icon-action danger" title="Excluir despesa" data-delete-expense="${e.id}">🗑</button></td></tr>`).join("")}
+            ${rows.map((e) => `<tr><td>${esc(e.category)}</td><td>${esc(e.description)}</td><td>${e.fixed ? "Despesa fixa" : e.projectId ? "Custo de obra" : "Variável"}</td><td>${brDate(e.date || e.dueDate)}</td><td>${money(e.amount)}</td><td class="right action-cell"><button class="icon-action" title="Editar despesa" data-edit-expense="${e.id}">✎</button><button class="icon-action danger" title="Excluir despesa" data-delete-expense="${e.id}">🗑</button></td></tr>`).join("")}
           </tbody>
         </table>
       </div>
@@ -1275,7 +1498,7 @@
           <div class="panel-head"><div><p class="eyebrow">Parâmetros gerais</p><h2>Base de cálculo</h2></div><button class="btn" data-action="edit-cost-settings">Editar parâmetros</button></div>
           <div class="summary-list">
             <div class="summary-line"><span>Margem padrão</span><strong>${parseNum(state.costSettings.defaultMarginPct)}%</strong></div>
-            <div class="summary-line"><span>Pintura padrão</span><strong>${money(state.costSettings.paintPriceM2)}/m²</strong></div>
+            <div class="summary-line"><span>Pintura eletrostática</span><strong>${money(state.costSettings.paintPriceM2)}/m²</strong></div>
             <div class="summary-line"><span>Jornada padrão</span><strong>${esc(workday.morningStart || "07:00")} às ${esc(workday.morningEnd || "11:30")} / ${esc(workday.afternoonStart || "13:00")} às ${esc(workday.afternoonEnd || "17:00")}</strong></div>
           </div>
         </section>
@@ -1563,9 +1786,10 @@
     const title = form.elements.title.value.trim() || "o serviço contratado";
     const validity = form.elements.validity.value.trim() || "5 dias";
     const bank = state.settings.bank ? `\nDados bancários: ${state.settings.bank}${state.settings.agency ? `, agência ${state.settings.agency}` : ""}${state.settings.account ? `, conta ${state.settings.account}` : ""}.` : "";
-    const pix = state.settings.pix ? `\nChave PIX: ${state.settings.pix}.` : "";
+    const pix = state.settings.pix ? `\n${state.settings.pixType || "Chave PIX"}: ${state.settings.pix}.` : "";
+    const card = state.settings.acceptsCreditCard === "true" ? `\nCartão de crédito: até ${state.settings.cardInstallments || "3"}x${parseNum(state.settings.cardFeePct) ? ` com ${parseNum(state.settings.cardFeePct)}% de juros` : " sem juros"}, conforme aprovação da operadora.` : "";
     const requestText = brief.trim() ? `Condição combinada: ${sentence(brief)}.` : `Condição sugerida para ${title}: 50% de entrada para início da produção e 50% na entrega/instalação.`;
-    return `${requestText} Orçamento válido por ${validity}. O início da produção fica condicionado à confirmação do pagamento inicial, quando aplicável. Alterações de escopo, medidas ou acabamento podem gerar novo cálculo de valor.${bank}${pix}`;
+    return `${requestText} Orçamento válido por ${validity}. O início da produção fica condicionado à confirmação do pagamento inicial, quando aplicável. Alterações de escopo, medidas ou acabamento podem gerar novo cálculo de valor.${bank}${pix}${card}`;
   }
 
   function openAiTextPopup(type, source) {
@@ -1640,9 +1864,10 @@
     const title = String(q.title || "o serviço contratado").trim();
     const validity = String(q.validity || "5 dias").trim();
     const bank = state.settings.bank ? `\nDados bancários: ${state.settings.bank}${state.settings.agency ? `, agência ${state.settings.agency}` : ""}${state.settings.account ? `, conta ${state.settings.account}` : ""}.` : "";
-    const pix = state.settings.pix ? `\nChave PIX: ${state.settings.pix}.` : "";
+    const pix = state.settings.pix ? `\n${state.settings.pixType || "Chave PIX"}: ${state.settings.pix}.` : "";
+    const card = state.settings.acceptsCreditCard === "true" ? `\nCartão de crédito: até ${state.settings.cardInstallments || "3"}x${parseNum(state.settings.cardFeePct) ? ` com ${parseNum(state.settings.cardFeePct)}% de juros` : " sem juros"}, conforme aprovação da operadora.` : "";
     const requestText = brief.trim() ? `Condição combinada: ${sentence(brief)}.` : `Condição sugerida para ${title}: 50% de entrada para início da produção e 50% na entrega/instalação.`;
-    return `${requestText} Orçamento válido por ${validity}. O início da produção fica condicionado à confirmação do pagamento inicial, quando aplicável. Alterações de escopo, medidas ou acabamento podem gerar novo cálculo de valor.${bank}${pix}`;
+    return `${requestText} Orçamento válido por ${validity}. O início da produção fica condicionado à confirmação do pagamento inicial, quando aplicável. Alterações de escopo, medidas ou acabamento podem gerar novo cálculo de valor.${bank}${pix}${card}`;
   }
 
   function sentence(value) {
@@ -1754,7 +1979,8 @@
       state.settings.agency ? `Agência: ${state.settings.agency}` : "",
       state.settings.account ? `Conta: ${state.settings.account}` : "",
       state.settings.holder ? `Titular: ${state.settings.holder}` : "",
-      state.settings.pix ? `PIX: ${state.settings.pix}` : "",
+      state.settings.pix ? `${state.settings.pixType || "PIX"}: ${state.settings.pix}` : "",
+      state.settings.acceptsCreditCard === "true" ? `Cartão de crédito: até ${state.settings.cardInstallments || "3"}x${parseNum(state.settings.cardFeePct) ? ` com ${parseNum(state.settings.cardFeePct)}% de juros` : " sem juros"}` : "",
     ].filter(Boolean);
     return `
       <div class="${printMode ? "print-page" : ""}">
@@ -1806,16 +2032,17 @@
 
   function openExpenseModal(expenseId) {
     const expense = expenseId ? state.expenses.find((e) => e.id === expenseId) || {} : {};
+    const defaultProjectId = expense.projectId || (state.route === "projectDetail" ? state.activeProjectId : "");
     openModal(`
       <form class="modal small" id="expenseForm">
         <div class="modal-head"><h2>${expenseId ? "Editar despesa" : "Nova despesa"}</h2><button class="btn-ghost" type="button" data-close-modal>Fechar</button></div>
         <div class="modal-body form-grid">
           <label>Categoria<input name="category" required placeholder="Aluguel, combustível, fornecedor" value="${esc(expense.category || "")}"></label>
-          <label>Tipo<select name="fixed"><option value="false" ${!expense.fixed ? "selected" : ""}>Variável</option><option value="true" ${expense.fixed ? "selected" : ""}>Fixa</option></select></label>
+          <label>Tipo<select name="fixed"><option value="false" ${!expense.fixed ? "selected" : ""}>Custo/Despesa variável</option><option value="true" ${expense.fixed ? "selected" : ""}>Despesa fixa</option></select></label>
           <label class="wide">Descrição<input name="description" required value="${esc(expense.description || "")}"></label>
           <label>Valor<input name="amount" required inputmode="decimal" value="${esc(expense.amount || "")}"></label>
           <label>Data<input name="date" type="date" value="${esc(expense.date || expense.dueDate || today())}"></label>
-          <label class="wide">Projeto opcional<select name="projectId"><option value="">Sem vínculo</option>${state.projects.map((p) => `<option value="${p.id}" ${expense.projectId === p.id ? "selected" : ""}>${esc(p.title)}</option>`).join("")}</select></label>
+          <label class="wide">Projeto opcional<select name="projectId"><option value="">Sem vínculo</option>${state.projects.map((p) => `<option value="${p.id}" ${defaultProjectId === p.id ? "selected" : ""}>${esc(p.title)}</option>`).join("")}</select></label>
         </div>
         <div class="modal-foot"><button class="btn-secondary" type="button" data-close-modal>Cancelar</button><button class="btn" type="submit">Salvar</button></div>
       </form>
@@ -1988,7 +2215,7 @@
         <div class="modal-head"><h2>Parâmetros de custo</h2><button class="btn-ghost" type="button" data-close-modal>Fechar</button></div>
         <div class="modal-body form-grid">
           <label>Margem padrão (%)<input name="defaultMarginPct" inputmode="decimal" value="${esc(c.defaultMarginPct)}"></label>
-          <label>Pintura padrão (R$/m²)<input name="paintPriceM2" inputmode="decimal" value="${esc(c.paintPriceM2)}"></label>
+          <label>Pintura eletrostática (R$/m²)<input name="paintPriceM2" inputmode="decimal" value="${esc(c.paintPriceM2)}"></label>
           <label>Entrada manhã<input name="morningStart" type="time" value="${esc(w.morningStart || "07:00")}"></label>
           <label>Saída almoço<input name="morningEnd" type="time" value="${esc(w.morningEnd || "11:30")}"></label>
           <label>Retorno almoço<input name="afternoonStart" type="time" value="${esc(w.afternoonStart || "13:00")}"></label>
@@ -2035,7 +2262,16 @@
           <label>Agência<input name="agency" value="${esc(s.agency)}"></label>
           <label>Conta<input name="account" value="${esc(s.account)}"></label>
           <label>Titular<input name="holder" value="${esc(s.holder)}"></label>
+          <label>Tipo da chave PIX<input name="pixType" value="${esc(s.pixType || "Chave PIX")}" placeholder="CPF, CNPJ, telefone, e-mail ou aleatória"></label>
           <label>PIX<input name="pix" value="${esc(s.pix)}"></label>
+          <label>Aceita cartão de crédito<select name="acceptsCreditCard"><option value="false" ${s.acceptsCreditCard !== "true" ? "selected" : ""}>Não</option><option value="true" ${s.acceptsCreditCard === "true" ? "selected" : ""}>Sim</option></select></label>
+          <label>Parcelas no cartão<input name="cardInstallments" inputmode="decimal" value="${esc(s.cardInstallments || "3")}"></label>
+          <label>Juros do cartão (%)<input name="cardFeePct" inputmode="decimal" value="${esc(s.cardFeePct || "0")}"></label>
+          <div class="wide payment-suggestions">
+            <button type="button" class="chip-button" data-payment-template="50% de entrada para início da produção e 50% na entrega/instalação.">50% entrada + 50% entrega</button>
+            <button type="button" class="chip-button" data-payment-template="Pagamento à vista com 5% de desconto após aprovação do orçamento.">À vista com desconto</button>
+            <button type="button" class="chip-button" data-payment-template="Pagamento no cartão de crédito conforme parcelas combinadas, sujeito às taxas da operadora.">Cartão de crédito</button>
+          </div>
           <label class="wide">Termos padrão<textarea name="defaultTerms">${esc(s.defaultTerms)}</textarea></label>
         </div>
         <div class="modal-foot"><button class="btn-secondary" type="button" data-close-modal>Cancelar</button><button class="btn" type="submit">Salvar</button></div>
@@ -2047,6 +2283,12 @@
       save();
       closeModal();
       render();
+    });
+    document.querySelectorAll("[data-payment-template]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const field = document.querySelector("#settingsForm [name='defaultTerms']");
+        if (field) field.value = button.dataset.paymentTemplate;
+      });
     });
   }
 
@@ -2385,6 +2627,10 @@
       routeTo("clientDetail", { activeClientId: target.dataset.clientId });
       return;
     }
+    if (target.dataset.projectId) {
+      routeTo("projectDetail", { activeProjectId: target.dataset.projectId });
+      return;
+    }
     if (target.dataset.action === "edit-quote") {
       openQuoteModal(target.dataset.quoteId);
       return;
@@ -2459,9 +2705,42 @@
       save();
       render();
     }
+    if (target.dataset.projectStatusChange) {
+      const project = getProject(target.dataset.projectStatusChange);
+      if (!project) return;
+      project.status = target.value;
+      project.updatedAt = today();
+      save();
+      render();
+    }
+    if (target.dataset.financePeriod !== undefined) {
+      state.financePeriod = target.value;
+      save();
+      render();
+    }
+    if (target.dataset.financeStart !== undefined) {
+      state.financeStart = target.value;
+      state.financePeriod = "custom";
+      save();
+      render();
+    }
+    if (target.dataset.financeEnd !== undefined) {
+      state.financeEnd = target.value;
+      state.financePeriod = "custom";
+      save();
+      render();
+    }
     if (target.dataset.import && target.files && target.files[0]) {
       handleImport(target.dataset.import, target.files[0]);
     }
+  });
+
+  document.addEventListener("focusin", (event) => {
+    const target = event.target;
+    if (!target.matches || !target.matches("input[inputmode='decimal'], input[type='number']")) return;
+    const value = String(target.value || "").trim();
+    if (/^0([,.]0+)?$/.test(value)) target.value = "";
+    else target.select();
   });
 
   boot();
