@@ -1,0 +1,7 @@
+README.md
+*.sql
+.git/
+.github/
+.vercel/
+node_modules/
+*.log
