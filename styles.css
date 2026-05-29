@@ -4192,6 +4192,16 @@ th,
   min-height: 42px !important;
 }
 
+.quote-status-panel .status-row.active {
+  border-color: rgba(255, 122, 26, 0.72) !important;
+  background: #131f3a !important;
+}
+
+.quote-status-panel .status-row.active .count > span {
+  border-color: rgba(255, 122, 26, 0.65) !important;
+  color: var(--orange) !important;
+}
+
 .quote-list-panel {
   width: 100% !important;
 }

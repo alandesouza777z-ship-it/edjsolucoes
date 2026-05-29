@@ -965,7 +965,9 @@
   }
 
   function renderQuotes() {
+    const filtered = state.activeStatus ? state.quotes.filter((q) => q.status === state.activeStatus) : state.quotes;
     const statusOpen = Boolean(state.quotesStatusOpen || state.activeStatus);
+    const listTitle = state.activeStatus ? statusLabels[state.activeStatus] : "Todos os orçamentos";
     return `
       <section class="grid quotes-page">
         ${pageHeader("Orçamentos", `${state.quotes.length} orçamento(s) no histórico.`, `<button class="btn" data-action="new-quote">+ Novo orçamento</button>`)}
@@ -977,11 +979,14 @@
             </div>
             <span>${statusOpen ? "Recolher" : "Abrir"} ›</span>
           </button>
-          ${statusOpen ? renderStatusList({ clickable: false }) : renderStatusStrip()}
+          ${statusOpen ? renderStatusList() : renderStatusStrip()}
         </section>
         <section class="panel quote-list-panel">
-          <div class="panel-head"><div><p class="eyebrow">Lista</p><h2>Todos os orçamentos</h2></div></div>
-          ${state.quotes.length ? renderQuoteTable(state.quotes) : empty("Nenhum orçamento encontrado.", "Os números de status aparecem zerados quando não há dados.")}
+          <div class="panel-head">
+            <div><p class="eyebrow">Lista</p><h2>${listTitle}</h2></div>
+            ${state.activeStatus ? `<button class="btn-secondary" data-clear-status>Mostrar todos</button>` : ""}
+          </div>
+          ${filtered.length ? renderQuoteTable(filtered) : empty("Nenhum orçamento encontrado.", "Não há orçamentos neste status.")}
         </section>
       </section>
     `;
