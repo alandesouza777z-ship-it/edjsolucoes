@@ -552,6 +552,10 @@
       .replaceAll("'", "&#039;");
   }
 
+  function textBlock(value) {
+    return esc(value || "").replace(/\r?\n/g, "<br>");
+  }
+
   function money(value) {
     return Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   }
@@ -587,6 +591,14 @@
   function brDate(date) {
     if (!date) return "";
     return new Date(date + "T12:00:00").toLocaleDateString("pt-BR");
+  }
+
+  function cityFromAddress(address) {
+    const text = String(address || "");
+    const match = text.match(/([^,\n]+?)\s*[-/]\s*[A-Z]{2}\b/i);
+    if (match) return match[1].split(",").pop().trim();
+    const parts = text.split(",").map((part) => part.trim()).filter(Boolean);
+    return parts.length ? parts[parts.length - 1] : "Belo Jardim";
   }
 
   function codeForNextQuote() {
@@ -2267,7 +2279,7 @@
     return project;
   }
 
-  function proposalHtml(q, printMode) {
+  function proposalHtmlLegacy(q, printMode) {
     const client = getClient(q.clientId) || {};
     const calc = calcQuote(q);
     const bankLines = [
@@ -2307,6 +2319,131 @@
         <section class="paper-total"><span>Total</span><strong>${money(calc.total)}</strong></section>
         <section class="paper-section"><strong>Validade:</strong> ${esc(q.validity || "")}<br><strong>Prazo:</strong> ${esc(q.deadline || "")}</section>
         <section class="paper-section"><strong>Condições de pagamento</strong><br>${esc(q.paymentTerms || state.settings.defaultTerms)}${bankLines.length ? `<br><br>${bankLines.map(esc).join("<br>")}` : ""}</section>
+      </div>
+    `;
+  }
+
+  function proposalHtml(q, printMode) {
+    const client = getClient(q.clientId) || {};
+    const calc = calcQuote(q);
+    const quoteCode = displayQuoteCode(q.code);
+    const quoteDate = brDate(q.createdAt || today());
+    const city = cityFromAddress(state.settings.address);
+    const qty = parseNum(q.commercialQty) || 1;
+    const unitPrice = calc.total / qty;
+    const companyName = state.settings.companyName || "EDJ Soluções em Manutenção";
+    const companyDocument = state.settings.document || "";
+    const companyOwner = state.settings.holder || "";
+    const serviceTitle = q.title || "Serviço solicitado";
+    const serviceDescription = q.description || q.title || "Serviço conforme solicitação do cliente.";
+    const paymentText = q.paymentTerms || state.settings.defaultTerms || "Condições de pagamento a combinar.";
+    const paymentMethods = state.settings.acceptsCreditCard === "true"
+      ? "Boleto, transferência bancária, dinheiro, cartão de crédito, cartão de débito ou pix."
+      : "Boleto, transferência bancária, dinheiro, cartão de débito ou pix.";
+    const pixValue = state.settings.pix || companyDocument;
+    const bankLines = [
+      state.settings.bank ? `Banco: ${state.settings.bank}` : "",
+      state.settings.agency ? `Agência: ${state.settings.agency}` : "",
+      state.settings.account ? `Conta: ${state.settings.account}` : "",
+      state.settings.holder ? `Titular: ${state.settings.holder}` : "",
+    ].filter(Boolean);
+
+    return `
+      <div class="proposal-page ${printMode ? "print-page" : ""}">
+        <header class="proposal-header">
+          <img class="proposal-logo" src="./assets/logo-edj.png" alt="EDJ" />
+          <div class="proposal-company">
+            <h1>${esc(companyName)}</h1>
+            ${companyOwner && companyOwner !== companyName ? `<p>${esc(companyOwner)}</p>` : ""}
+            ${companyDocument ? `<p>CNPJ: ${esc(companyDocument)}</p>` : ""}
+            ${state.settings.address ? `<p>${esc(state.settings.address)}</p>` : ""}
+          </div>
+          <div class="proposal-contact">
+            ${state.settings.email ? `<p><span>E-mail</span>${esc(state.settings.email)}</p>` : ""}
+            ${state.settings.phone ? `<p><span>Telefone</span>${esc(state.settings.phone)}</p>` : ""}
+            ${pixValue ? `<p><span>PIX</span>${esc(pixValue)}</p>` : ""}
+            <time>${esc(quoteDate)}</time>
+          </div>
+        </header>
+
+        <div class="proposal-social">edj_solucoes</div>
+
+        <section class="proposal-title-block">
+          <h2>Proposta comercial ${esc(quoteCode)}</h2>
+          <p>${esc(serviceTitle.toUpperCase())}</p>
+        </section>
+
+        <p class="proposal-client"><strong>Cliente:</strong> ${esc(client.name || "Cliente não informado")}${client.document ? ` <span>CPF/CNPJ: ${esc(client.document)}</span>` : ""}</p>
+
+        <section class="proposal-section">
+          <h3>Informações básicas</h3>
+          <div class="proposal-info-grid">
+            <div>
+              <strong>Validade do orçamento</strong>
+              <span>${esc(q.validity || "Conforme negociação")}</span>
+            </div>
+            <div>
+              <strong>Prazo de execução</strong>
+              <span>${esc(q.deadline || "A combinar")}</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="proposal-section proposal-services">
+          <h3>Serviços</h3>
+          <table class="proposal-table">
+            <thead>
+              <tr>
+                <th>Descrição</th>
+                <th>Unidade</th>
+                <th>Preço unitário</th>
+                <th>Qtd.</th>
+                <th>Preço</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <strong>${esc(serviceTitle.toUpperCase())}</strong>
+                  <p>${textBlock(serviceDescription)}</p>
+                </td>
+                <td>un.</td>
+                <td>${money(unitPrice)}</td>
+                <td>${esc(q.commercialQty || "1")}</td>
+                <td>${money(calc.total)}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="proposal-total-row"><span>Total</span><strong>${money(calc.total)}</strong></div>
+        </section>
+
+        <section class="proposal-section proposal-payment">
+          <h3>Pagamento</h3>
+          <div class="proposal-payment-grid">
+            <div>
+              <strong>Meios de pagamento</strong>
+              <p>${esc(paymentMethods)}</p>
+              ${paymentText ? `<strong>Condições de pagamento</strong><p>${textBlock(paymentText)}</p>` : ""}
+            </div>
+            ${pixValue ? `<div><strong>PIX</strong><p>${esc(pixValue)}</p></div>` : ""}
+            ${bankLines.length ? `<div><strong>Dados bancários</strong><p>${bankLines.map(esc).join("<br>")}</p></div>` : ""}
+          </div>
+        </section>
+
+        <footer class="proposal-signatures">
+          <p>${esc(city)}, ${esc(quoteDate)}</p>
+          <div>
+            <span>
+              <strong>${esc(companyName.toUpperCase())}</strong>
+              ${companyOwner ? `<em>${esc(companyOwner)}</em>` : ""}
+            </span>
+            <span>
+              <strong>${esc(String(client.name || "Cliente").toUpperCase())}</strong>
+            </span>
+          </div>
+        </footer>
+
+        <small class="proposal-page-number">Página 1/1</small>
       </div>
     `;
   }
