@@ -665,12 +665,13 @@
 
   function calcQuote(q) {
     const materials = (q.materials || []).reduce((sum, item) => sum + parseNum(item.qty) * parseNum(item.unitCost), 0);
+    const paint = parseNum(q.paintAmount);
     const labor = (q.labor || []).reduce((sum, item) => sum + parseNum(item.days) * parseNum(item.dailyRate), 0);
     const extras = (q.extras || []).reduce((sum, item) => sum + parseNum(item.amount), 0);
-    const subtotalCost = materials + labor + extras;
+    const subtotalCost = materials + paint + labor + extras;
     const marginPct = parseNum(q.marginPct);
     const total = subtotalCost * (1 + marginPct / 100);
-    return { materials, labor, extras, subtotalCost, marginPct, total };
+    return { materials, paint, labor, extras, subtotalCost, marginPct, total };
   }
 
   function projectResult(projectId) {
@@ -1645,7 +1646,7 @@
     }
   }
 
-  function openQuoteModal(existingId, forcedClientId) {
+  function openQuoteModalLegacy(existingId, forcedClientId) {
     if (!existingId && !state.clients.length) {
       openModal(`
         <div class="modal small">
@@ -1752,17 +1753,312 @@
     });
   }
 
+  function openQuoteModal(existingId, forcedClientId) {
+    if (!existingId && !state.clients.length) {
+      openModal(`
+        <div class="modal small">
+          <div class="modal-head"><h2>Novo orçamento</h2><button class="btn-ghost" type="button" data-close-modal>Fechar</button></div>
+          <div class="modal-body">
+            ${empty("Cadastre um cliente primeiro.", "O orçamento precisa ser nominal ao cliente para sair com CPF/CNPJ e dados corretos no PDF.")}
+          </div>
+          <div class="modal-foot"><button class="btn-secondary" type="button" data-close-modal>Cancelar</button><button class="btn" type="button" data-action="new-client">Cadastrar cliente</button></div>
+        </div>
+      `);
+      return;
+    }
+
+    const q = existingId ? getQuote(existingId) : null;
+    const steps = ["Cliente", "Projeto", "Materiais", "Custos", "Proposta", "Resumo"];
+    let currentStep = 0;
+
+    openModal(`
+      <form class="modal quote-wizard-modal" id="quoteForm">
+        <div class="modal-head">
+          <h2>${q ? "Editar orçamento" : "Novo orçamento"}</h2>
+          <button class="btn-ghost modal-close-x" type="button" data-close-modal aria-label="Fechar">×</button>
+        </div>
+        <div class="quote-stepper">
+          ${steps.map((step, index) => `
+            <button type="button" class="quote-step ${index === 0 ? "active" : ""}" data-wizard-step="${index}">
+              <span>${index < 5 ? "✓" : index + 1}</span>${esc(step)}
+            </button>
+          `).join("")}
+        </div>
+        <div class="modal-body quote-wizard-body">
+          <section class="wizard-panel active" data-wizard-panel="0">
+            <div class="wizard-block">
+              <p class="eyebrow">Cliente</p>
+              <h3>Dados do cliente</h3>
+              <div class="form-grid">
+                <label class="wide">Cliente
+                  <select name="clientId" required>
+                    ${state.clients.map((c) => `<option value="${c.id}" ${(q && q.clientId === c.id) || forcedClientId === c.id ? "selected" : ""}>${esc(c.name)}${c.document ? ` - ${esc(c.document)}` : ""}</option>`).join("")}
+                  </select>
+                </label>
+              </div>
+              <p class="muted">O nome, CPF/CNPJ e contato cadastrados entram automaticamente no PDF comercial.</p>
+            </div>
+          </section>
+
+          <section class="wizard-panel" data-wizard-panel="1">
+            <div class="wizard-block">
+              <p class="eyebrow">Projeto</p>
+              <h3>Pedido e prazos</h3>
+              <div class="form-grid">
+                <label>Status<select name="status">${statusOrder.map((s) => `<option value="${s}" ${(q ? q.status : "pendente") === s ? "selected" : ""}>${statusLabels[s]}</option>`).join("")}</select></label>
+                <label>Título do pedido<input name="title" required value="${esc(q ? q.title : "")}" placeholder="Portão social, telhado, guarda-corpo"></label>
+                <label>Quantidade comercial<input name="commercialQty" value="${esc(q ? q.commercialQty : "1")}" inputmode="decimal"></label>
+                <label>Validade<input name="validity" value="${esc(q ? q.validity : "5 dias")}"></label>
+                <label>Prazo<input name="deadline" value="${esc(q ? q.deadline : "")}" placeholder="7 dias úteis"></label>
+              </div>
+            </div>
+          </section>
+
+          <section class="wizard-panel" data-wizard-panel="2">
+            <div class="wizard-block">
+              <div class="panel-head">
+                <div><p class="eyebrow">Materiais</p><h3>Base interna de materiais</h3></div>
+                <button class="btn-secondary" type="button" data-add-material-line>Adicionar material</button>
+              </div>
+              <div id="materialLines" class="stack">${renderMaterialInputs(q ? q.materials : [])}</div>
+              ${renderMaterialsDatalist()}
+              <p class="muted">Esses itens servem para cálculo interno. Eles não aparecem detalhados no PDF do cliente.</p>
+            </div>
+          </section>
+
+          <section class="wizard-panel" data-wizard-panel="3">
+            <div class="wizard-block">
+              <p class="eyebrow">Custos</p>
+              <h3>Pintura, mão de obra e extras</h3>
+              <div class="form-grid">
+                <label>Margem (%)<input name="marginPct" value="${esc(q ? q.marginPct : state.costSettings.defaultMarginPct)}" inputmode="decimal"></label>
+                <label>Pintura (R$)<input name="paintAmount" value="${esc(q ? q.paintAmount || "" : "")}" inputmode="decimal"></label>
+                <label>Função<select name="laborRole"><option value="">Selecionar</option>${state.costSettings.laborRoles.map((r) => `<option value="${r.id}">${esc(r.role)} - ${money(r.dailyRate)}</option>`).join("")}</select></label>
+                <label>Diárias<input name="laborDays" value="" inputmode="decimal"></label>
+                <label>Extra/Imposto descrição<input name="extraLabel" value=""></label>
+                <label>Extra/Imposto valor<input name="extraAmount" value="" inputmode="decimal"></label>
+              </div>
+              <p class="muted">Custos e margem ficam apenas na base interna. O cliente vê somente a proposta comercial.</p>
+            </div>
+          </section>
+
+          <section class="wizard-panel" data-wizard-panel="4">
+            <div class="wizard-block">
+              <section class="ai-assistant">
+                <div class="ai-assistant-head">
+                  <span class="ai-spark">✦</span>
+                  <div>
+                    <h3>Assistente de texto com IA</h3>
+                    <p>Digite simples, gere um texto comercial e edite antes de enviar ao cliente.</p>
+                  </div>
+                </div>
+                <div class="ai-assistant-actions">
+                  <button class="btn ai-button" type="button" data-ai-generate="description">✦ Gerar descrição do orçamento</button>
+                  <button class="btn ai-button" type="button" data-ai-generate="payment">✦ Gerar condições de pagamento</button>
+                </div>
+              </section>
+              <div class="form-grid">
+                <label class="wide">Descrição comercial<textarea name="description">${esc(q ? q.description : "")}</textarea></label>
+                <label class="wide">Condições de pagamento<textarea name="paymentTerms">${esc(q ? q.paymentTerms : state.settings.defaultTerms || "")}</textarea></label>
+              </div>
+            </div>
+          </section>
+
+          <section class="wizard-panel" data-wizard-panel="5">
+            <div class="wizard-summary-card" id="wizardSummary"></div>
+            <div class="wizard-pdf-actions">
+              <label class="switch-line"><input type="checkbox" name="downloadAfterSave"> <span></span> Gerar PDF e baixar ao concluir</label>
+              <div class="actions">
+                <button class="btn-secondary" type="button" data-toggle-live-preview>Ver prévia ao vivo</button>
+                <button class="btn-secondary" type="button" data-print-draft>Baixar PDF agora</button>
+              </div>
+            </div>
+            <div class="wizard-live-preview" id="wizardPdfPreview" hidden></div>
+          </section>
+        </div>
+        <div class="modal-foot wizard-foot">
+          <button class="btn-secondary wizard-back" type="button" data-prev-step>← Voltar</button>
+          <button class="btn wizard-next" type="button" data-next-step>Avançar</button>
+          <button class="btn wizard-finish" type="submit" hidden>Concluir orçamento</button>
+        </div>
+      </form>
+    `);
+
+    const form = document.getElementById("quoteForm");
+    const panels = [...form.querySelectorAll("[data-wizard-panel]")];
+    const stepButtons = [...form.querySelectorAll("[data-wizard-step]")];
+    const prevButton = form.querySelector("[data-prev-step]");
+    const nextButton = form.querySelector("[data-next-step]");
+    const finishButton = form.querySelector(".wizard-finish");
+    const previewPanel = form.querySelector("#wizardPdfPreview");
+
+    const setStep = (index) => {
+      currentStep = Math.max(0, Math.min(index, steps.length - 1));
+      panels.forEach((panel, panelIndex) => panel.classList.toggle("active", panelIndex === currentStep));
+      stepButtons.forEach((button, buttonIndex) => {
+        button.classList.toggle("active", buttonIndex === currentStep);
+        button.classList.toggle("done", buttonIndex < currentStep);
+        button.querySelector("span").textContent = buttonIndex < currentStep ? "✓" : buttonIndex + 1;
+      });
+      prevButton.disabled = currentStep === 0;
+      nextButton.hidden = currentStep === steps.length - 1;
+      finishButton.hidden = currentStep !== steps.length - 1;
+      refreshWizardSummary();
+    };
+
+    const refreshWizardSummary = () => {
+      const draft = buildQuoteDraftFromForm(form, q);
+      form.querySelector("#wizardSummary").innerHTML = renderQuoteWizardSummary(draft);
+      if (!previewPanel.hidden) previewPanel.innerHTML = `<div class="paper">${proposalHtml(draft.quote, false)}</div>`;
+    };
+
+    form.querySelector("[data-add-material-line]").addEventListener("click", () => {
+      document.getElementById("materialLines").insertAdjacentHTML("beforeend", renderMaterialInput());
+      refreshWizardSummary();
+    });
+
+    form.addEventListener("input", (event) => {
+      if (event.target.matches("[name='materialName']")) fillMaterialFromCatalog(event.target);
+      refreshWizardSummary();
+    });
+    form.addEventListener("change", refreshWizardSummary);
+
+    form.querySelectorAll("[data-ai-generate]").forEach((button) => {
+      button.addEventListener("click", () => openAiTextPopup(button.dataset.aiGenerate, "form"));
+    });
+
+    form.querySelectorAll("[data-wizard-step]").forEach((button) => {
+      button.addEventListener("click", () => setStep(Number(button.dataset.wizardStep)));
+    });
+
+    nextButton.addEventListener("click", () => {
+      const activeRequired = panels[currentStep].querySelectorAll("input[required], select[required], textarea[required]");
+      const invalid = [...activeRequired].find((field) => !field.checkValidity());
+      if (invalid) {
+        invalid.reportValidity();
+        return;
+      }
+      setStep(currentStep + 1);
+    });
+    prevButton.addEventListener("click", () => setStep(currentStep - 1));
+
+    form.querySelector("[data-toggle-live-preview]").addEventListener("click", () => {
+      previewPanel.hidden = !previewPanel.hidden;
+      refreshWizardSummary();
+    });
+
+    form.querySelector("[data-print-draft]").addEventListener("click", () => {
+      const draft = buildQuoteDraftFromForm(form, q);
+      printArea.innerHTML = proposalHtml(draft.quote, true);
+      window.print();
+    });
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (!form.reportValidity()) return;
+      const draft = buildQuoteDraftFromForm(form, q);
+      if (q) {
+        Object.assign(q, { ...draft.data, materials: draft.materials, labor: draft.labor, extras: draft.extras, updatedAt: today() });
+        handleStatusSideEffects(q);
+      } else {
+        const quote = { id: uid(), code: codeForNextQuote(), createdAt: today(), receivableGenerated: false, projectGenerated: false, ...draft.data, materials: draft.materials, labor: draft.labor, extras: draft.extras };
+        state.quotes.push(quote);
+        handleStatusSideEffects(quote);
+        state.activeQuoteId = quote.id;
+      }
+      const savedQuote = q || getQuote(state.activeQuoteId);
+      save();
+      if (form.elements.downloadAfterSave.checked && savedQuote) {
+        printArea.innerHTML = proposalHtml(savedQuote, true);
+        window.print();
+      }
+      closeModal();
+      routeTo("quoteDetail", { activeQuoteId: savedQuote ? savedQuote.id : state.activeQuoteId, activeQuoteTab: "summary" });
+    });
+
+    setStep(0);
+  }
+
+  function buildQuoteDraftFromForm(form, existingQuote = null) {
+    const data = serializeForm(form);
+    delete data.laborRole;
+    delete data.laborDays;
+    delete data.extraLabel;
+    delete data.extraAmount;
+    delete data.downloadAfterSave;
+    delete data.materialId;
+    delete data.materialName;
+    delete data.materialQty;
+    delete data.materialUnit;
+    delete data.materialUnitCost;
+    const materials = [...form.querySelectorAll("[data-material-row]")].map((row) => ({
+      id: row.dataset.existingId || uid(),
+      materialId: row.querySelector("[name='materialId']").value,
+      name: row.querySelector("[name='materialName']").value,
+      qty: parseNum(row.querySelector("[name='materialQty']").value),
+      unit: row.querySelector("[name='materialUnit']").value,
+      unitCost: parseNum(row.querySelector("[name='materialUnitCost']").value),
+      snapshot: snapshotForMaterial(row),
+    })).filter((m) => m.name && m.qty);
+    const labor = [...(existingQuote && existingQuote.labor ? existingQuote.labor : [])];
+    const selectedRole = state.costSettings.laborRoles.find((r) => r.id === form.elements.laborRole.value);
+    if (selectedRole && parseNum(form.elements.laborDays.value)) {
+      labor.push({ id: uid(), role: selectedRole.role, days: parseNum(form.elements.laborDays.value), dailyRate: parseNum(selectedRole.dailyRate), snapshot: { capturedAt: new Date().toISOString() } });
+    }
+    const extras = [...(existingQuote && existingQuote.extras ? existingQuote.extras : [])];
+    if (form.elements.extraLabel.value && parseNum(form.elements.extraAmount.value)) {
+      extras.push({ id: uid(), label: form.elements.extraLabel.value, amount: parseNum(form.elements.extraAmount.value) });
+    }
+    const quote = {
+      ...(existingQuote || {}),
+      id: existingQuote ? existingQuote.id : "__preview",
+      code: existingQuote ? existingQuote.code : codeForNextQuote(),
+      createdAt: existingQuote ? existingQuote.createdAt : today(),
+      receivableGenerated: existingQuote ? existingQuote.receivableGenerated : false,
+      projectGenerated: existingQuote ? existingQuote.projectGenerated : false,
+      ...data,
+      paintAmount: parseNum(data.paintAmount),
+      materials,
+      labor,
+      extras,
+    };
+    return { data: { ...data, paintAmount: parseNum(data.paintAmount) }, materials, labor, extras, quote, calc: calcQuote(quote), client: getClient(data.clientId) };
+  }
+
+  function renderQuoteWizardSummary(draft) {
+    const q = draft.quote;
+    const calc = draft.calc;
+    return `
+      <div class="summary-grid">
+        <span>Cliente</span><strong>${esc(draft.client ? draft.client.name : "Sem cliente")}</strong>
+        <span>Projeto</span><strong>${esc(q.title || "Sem título")}</strong>
+        <span>Itens</span><strong>${esc(q.commercialQty || "1")}</strong>
+      </div>
+      <div class="summary-grid totals">
+        <span>Materiais</span><strong>${money(calc.materials)}</strong>
+        <span>Pintura</span><strong>${money(calc.paint || 0)}</strong>
+        <span>Mão de obra</span><strong>${money(calc.labor)}</strong>
+        <span>Custos extras</span><strong>${money(calc.extras)}</strong>
+        <span>Subtotal</span><strong>${money(calc.subtotalCost)}</strong>
+        <span>Margem (${parseNum(q.marginPct)}%)</span><strong>${money(calc.total - calc.subtotalCost)}</strong>
+      </div>
+      <div class="summary-total"><span>TOTAL</span><strong>${money(calc.total)}</strong></div>
+    `;
+  }
+
   function applyQuoteAssistant(type, brief = "") {
     const form = document.getElementById("quoteForm");
     if (!form) return;
     if (type === "description") {
       form.elements.description.value = buildQuoteDescription(form, brief);
       form.elements.description.focus();
+      form.dispatchEvent(new Event("input", { bubbles: true }));
       return;
     }
     if (type === "payment") {
       form.elements.paymentTerms.value = buildPaymentTerms(form, brief);
       form.elements.paymentTerms.focus();
+      form.dispatchEvent(new Event("input", { bubbles: true }));
     }
   }
 
