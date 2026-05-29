@@ -32,6 +32,7 @@
     activeClientId: null,
     activeQuoteId: null,
     activeStatus: null,
+    quotesStatusOpen: false,
     clients: [],
     materials: [],
     quotes: [],
@@ -574,6 +575,10 @@
     return `ORC-${year}-${String(max + 1).padStart(4, "0")}`;
   }
 
+  function displayQuoteCode(code) {
+    return String(code || "").replace(/^ORC-/i, "");
+  }
+
   function currentMonthRange() {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
@@ -833,16 +838,33 @@
     `;
   }
 
-  function renderStatusList() {
+  function renderStatusList(options = {}) {
+    const clickable = options.clickable !== false;
     const counts = Object.fromEntries(statusOrder.map((s) => [s, 0]));
     state.quotes.forEach((q) => counts[q.status || "pendente"] = (counts[q.status || "pendente"] || 0) + 1);
     return `
       <div class="status-list">
         ${statusOrder.map((status) => `
-          <button class="status-row" data-status-filter="${status}">
+          <button class="status-row ${state.activeStatus === status ? "active" : ""}" ${clickable ? `data-status-filter="${status}"` : ""}>
             <span class="status-label"><span class="dot ${status}"></span>${statusLabels[status]}</span>
             <span class="count">${counts[status] || 0}<span>›</span></span>
           </button>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  function renderStatusStrip() {
+    const counts = Object.fromEntries(statusOrder.map((s) => [s, 0]));
+    state.quotes.forEach((q) => counts[q.status || "pendente"] = (counts[q.status || "pendente"] || 0) + 1);
+    return `
+      <div class="quote-status-strip">
+        ${statusOrder.map((status) => `
+          <span class="status-chip">
+            <span class="dot ${status}"></span>
+            <strong>${counts[status] || 0}</strong>
+            <span>${statusLabels[status]}</span>
+          </span>
         `).join("")}
       </div>
     `;
@@ -943,23 +965,24 @@
   }
 
   function renderQuotes() {
-    const filtered = state.activeStatus ? state.quotes.filter((q) => q.status === state.activeStatus) : state.quotes;
+    const statusOpen = Boolean(state.quotesStatusOpen || state.activeStatus);
     return `
-      <section class="grid">
+      <section class="grid quotes-page">
         ${pageHeader("Orçamentos", `${state.quotes.length} orçamento(s) no histórico.`, `<button class="btn" data-action="new-quote">+ Novo orçamento</button>`)}
-        <div class="two-col">
-          <section class="panel">
-            <div class="panel-head">
-              <div><p class="eyebrow">Pedidos</p><h2>Pedidos por status</h2></div>
-              ${state.activeStatus ? `<button class="btn-secondary" data-clear-status>Todos</button>` : ""}
+        <section class="panel quote-status-panel ${statusOpen ? "open" : "collapsed"}">
+          <button class="quote-status-toggle" type="button" data-action="toggle-quote-status" aria-expanded="${statusOpen ? "true" : "false"}">
+            <div>
+              <p class="eyebrow">Pedidos</p>
+              <h2>Pedidos por status</h2>
             </div>
-            ${renderStatusList()}
-          </section>
-          <section class="panel">
-            <div class="panel-head"><div><p class="eyebrow">Lista</p><h2>${state.activeStatus ? statusLabels[state.activeStatus] : "Todos os orçamentos"}</h2></div></div>
-            ${filtered.length ? renderQuoteTable(filtered) : empty("Nenhum orçamento encontrado.", "Os números de status aparecem zerados quando não há dados.")}
-          </section>
-        </div>
+            <span>${statusOpen ? "Recolher" : "Abrir"} ›</span>
+          </button>
+          ${statusOpen ? renderStatusList({ clickable: false }) : renderStatusStrip()}
+        </section>
+        <section class="panel quote-list-panel">
+          <div class="panel-head"><div><p class="eyebrow">Lista</p><h2>Todos os orçamentos</h2></div></div>
+          ${state.quotes.length ? renderQuoteTable(state.quotes) : empty("Nenhum orçamento encontrado.", "Os números de status aparecem zerados quando não há dados.")}
+        </section>
       </section>
     `;
   }
@@ -975,7 +998,7 @@
               const calc = calcQuote(q);
               return `
                 <tr>
-                  <td><button class="clickable" data-quote-id="${q.id}">${esc(q.code)}</button></td>
+                  <td><button class="clickable" data-quote-id="${q.id}">${esc(displayQuoteCode(q.code))}</button></td>
                   <td><button class="clickable" data-quote-id="${q.id}">${esc(q.title || "Sem título")}</button></td>
                   <td>${client ? `<button class="clickable" data-client-id="${client.id}">${esc(client.name)}</button>` : ""}</td>
                   <td><select data-status-change="${q.id}">${statusOrder.map((s) => `<option value="${s}" ${q.status === s ? "selected" : ""}>${statusLabels[s]}</option>`).join("")}</select></td>
@@ -1005,7 +1028,7 @@
       <section class="quote-layout">
         <div class="panel">
           <div class="panel-head">
-            <div><p class="eyebrow">${esc(q.code)}</p><h2>${esc(q.title || "Orçamento")}</h2></div>
+            <div><p class="eyebrow">${esc(displayQuoteCode(q.code))}</p><h2>${esc(q.title || "Orçamento")}</h2></div>
             <div class="actions">
               <button class="btn-secondary" data-action="edit-quote" data-quote-id="${q.id}">Editar</button>
               <button class="btn" data-action="preview-pdf" data-quote-id="${q.id}">Gerar PDF</button>
@@ -1688,7 +1711,7 @@
         Object.assign(receivable, {
           clientId: q.clientId,
           projectId: project.id,
-          description: `${q.code} - ${q.title}`,
+          description: `${displayQuoteCode(q.code)} - ${q.title}`,
           amount: calc.total,
           status: receivable.status === "cancelado" ? "previsto" : receivable.status,
         });
@@ -1698,7 +1721,7 @@
           clientId: q.clientId,
           quoteId: q.id,
           projectId: project.id,
-          description: `${q.code} - ${q.title}`,
+          description: `${displayQuoteCode(q.code)} - ${q.title}`,
           amount: calc.total,
           dueDate: addDays(today(), 15),
           status: "previsto",
@@ -1741,7 +1764,7 @@
           <time>${brDate(today())}</time>
         </header>
         <section class="paper-title">
-          <h2>Proposta comercial ${esc(q.code)}</h2>
+          <h2>Proposta comercial ${esc(displayQuoteCode(q.code))}</h2>
           <strong>${esc(q.title || "")}</strong>
         </section>
         <section class="paper-section">
@@ -2365,6 +2388,10 @@
       previewPdf(target.dataset.quoteId);
       return;
     }
+    if (target.dataset.action === "toggle-quote-status") {
+      routeTo("quotes", { quotesStatusOpen: !state.quotesStatusOpen, activeStatus: null });
+      return;
+    }
     if (target.dataset.quoteId) {
       routeTo("quoteDetail", { activeQuoteId: target.dataset.quoteId, activeQuoteTab: "summary" });
       return;
@@ -2374,7 +2401,7 @@
       return;
     }
     if (target.dataset.statusFilter) {
-      routeTo("quotes", { activeStatus: target.dataset.statusFilter });
+      routeTo("quotes", { activeStatus: target.dataset.statusFilter, quotesStatusOpen: true });
       return;
     }
     if (target.dataset.clearStatus !== undefined) {

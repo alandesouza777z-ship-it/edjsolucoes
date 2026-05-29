@@ -4065,3 +4065,173 @@ tbody tr:last-child td {
     grid-template-columns: 1fr !important;
   }
 }
+
+/* Quotes page refinements requested after the reference pass. */
+:root {
+  font-family: Arial, Helvetica, sans-serif !important;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: Arial, Helvetica, sans-serif !important;
+}
+
+.page-head h1,
+.panel-head h2,
+.panel-head h3,
+.card strong,
+.clickable {
+  font-weight: 700 !important;
+}
+
+.brand strong,
+.nav button,
+.btn,
+.btn-secondary,
+.btn-ghost,
+td,
+.status-label {
+  font-weight: 600 !important;
+}
+
+th,
+.eyebrow,
+.card span {
+  font-weight: 700 !important;
+}
+
+.quotes-page {
+  gap: 14px !important;
+}
+
+.quote-status-panel {
+  padding: 14px 24px !important;
+}
+
+.quote-status-toggle {
+  width: 100% !important;
+  min-height: 42px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 14px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--ink) !important;
+  text-align: left !important;
+  box-shadow: none !important;
+}
+
+.quote-status-toggle h2 {
+  margin: 0 !important;
+  color: var(--ink) !important;
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+}
+
+.quote-status-toggle .eyebrow {
+  margin-bottom: 4px !important;
+}
+
+.quote-status-toggle > span {
+  flex: 0 0 auto !important;
+  color: var(--muted) !important;
+  font-size: 0.82rem !important;
+  font-weight: 600 !important;
+}
+
+.quote-status-toggle:hover > span {
+  color: var(--orange) !important;
+}
+
+.quote-status-strip {
+  display: grid !important;
+  grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  margin-top: 10px !important;
+}
+
+.status-chip {
+  min-height: 38px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-width: 0 !important;
+  padding: 0 10px !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 8px !important;
+  background: var(--surface-2) !important;
+  color: var(--muted) !important;
+  overflow: hidden !important;
+}
+
+.status-chip strong {
+  color: var(--ink) !important;
+  font-size: 0.9rem !important;
+  font-weight: 700 !important;
+}
+
+.status-chip span:last-child {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  font-size: 0.78rem !important;
+}
+
+.quote-status-panel.open .status-list {
+  margin-top: 10px !important;
+}
+
+.quote-status-panel.open .status-row {
+  min-height: 42px !important;
+}
+
+.quote-list-panel {
+  width: 100% !important;
+}
+
+.quote-list-panel .panel-head {
+  margin-bottom: 12px !important;
+}
+
+.quote-list-panel .table-wrap {
+  width: 100% !important;
+}
+
+.quote-list-panel th,
+.quote-list-panel td {
+  height: 48px !important;
+}
+
+.quote-list-panel select[data-status-change] {
+  min-height: 30px !important;
+  max-width: 210px !important;
+  padding: 5px 9px !important;
+  font-size: 0.82rem !important;
+}
+
+@media (max-width: 1180px) {
+  .quote-status-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 680px) {
+  .quote-status-panel {
+    padding: 14px 16px !important;
+  }
+
+  .quote-status-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .quote-status-toggle {
+    align-items: flex-start !important;
+  }
+}
