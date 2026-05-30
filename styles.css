@@ -5946,3 +5946,187 @@ select[data-status-change] {
     max-width: 132px !important;
   }
 }
+
+.mobile-quote-list-native {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .quote-list-panel {
+    border-radius: 18px !important;
+  }
+
+  .quote-list-panel .panel-head h2 {
+    font-size: 0.96rem !important;
+  }
+
+  .quote-table-wrap table {
+    display: none !important;
+  }
+
+  .mobile-quote-list-native {
+    display: grid !important;
+    gap: 5px !important;
+  }
+
+  .mobile-quote-row {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto auto !important;
+    grid-template-areas:
+      "title total total"
+      "meta status actions" !important;
+    align-items: center !important;
+    gap: 4px 7px !important;
+    min-height: 57px !important;
+    padding: 7px 8px !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 16px !important;
+    background: var(--surface-2) !important;
+  }
+
+  .mobile-quote-row button {
+    border: 0 !important;
+    background: transparent !important;
+    color: inherit !important;
+    padding: 0 !important;
+    min-height: 0 !important;
+    cursor: pointer !important;
+  }
+
+  .mobile-quote-title {
+    grid-area: title !important;
+    min-width: 0 !important;
+    color: var(--ink) !important;
+    font-size: 0.78rem !important;
+    font-weight: 900 !important;
+    line-height: 1.1 !important;
+    text-align: left !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .mobile-quote-total {
+    grid-area: total !important;
+    color: var(--ink) !important;
+    font-size: 0.76rem !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+  }
+
+  .mobile-quote-meta {
+    grid-area: meta !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    color: var(--muted) !important;
+    font-size: 0.62rem !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+  }
+
+  .mobile-quote-meta > * {
+    color: var(--muted) !important;
+    font: inherit !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .mobile-quote-meta > *:not(:last-child)::after {
+    content: "•" !important;
+    margin-left: 5px !important;
+    color: var(--muted-2) !important;
+  }
+
+  .mobile-quote-meta > :first-child,
+  .mobile-quote-meta > :nth-child(2) {
+    flex: 0 0 auto !important;
+  }
+
+  .mobile-quote-status {
+    grid-area: status !important;
+    width: 92px !important;
+    min-width: 92px !important;
+    max-width: 92px !important;
+    min-height: 24px !important;
+    padding: 2px 20px 2px 8px !important;
+    border-radius: 999px !important;
+    font-size: 0.61rem !important;
+    font-weight: 850 !important;
+    line-height: 1 !important;
+  }
+
+  .mobile-quote-actions {
+    grid-area: actions !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 3px !important;
+  }
+
+  .mobile-quote-actions .icon-action {
+    width: 22px !important;
+    height: 22px !important;
+    min-width: 22px !important;
+    border-radius: 8px !important;
+    font-size: 0.66rem !important;
+  }
+
+  .panel,
+  .card,
+  .table-wrap,
+  .status-row,
+  .compact-row,
+  .client-header {
+    border-radius: 16px !important;
+  }
+
+  .btn,
+  .btn-secondary,
+  .btn-ghost,
+  input,
+  select,
+  textarea {
+    border-radius: 12px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .mobile-quote-row {
+    grid-template-columns: minmax(0, 1fr) auto auto !important;
+    gap: 4px 5px !important;
+    padding: 7px !important;
+    border-radius: 15px !important;
+  }
+
+  .mobile-quote-title {
+    font-size: 0.75rem !important;
+  }
+
+  .mobile-quote-total {
+    font-size: 0.72rem !important;
+  }
+
+  .mobile-quote-meta {
+    font-size: 0.58rem !important;
+  }
+
+  .mobile-quote-status {
+    width: 84px !important;
+    min-width: 84px !important;
+    max-width: 84px !important;
+    padding-right: 18px !important;
+    font-size: 0.56rem !important;
+  }
+
+  .mobile-quote-actions .icon-action {
+    width: 21px !important;
+    height: 21px !important;
+    min-width: 21px !important;
+  }
+}

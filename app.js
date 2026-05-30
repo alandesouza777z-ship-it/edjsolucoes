@@ -1092,6 +1092,29 @@
   function renderQuoteTable(quotes) {
     return `
       <div class="table-wrap mobile-card-table quote-table-wrap">
+        <div class="mobile-quote-list-native">
+          ${quotes.map((q) => {
+            const client = getClient(q.clientId);
+            const calc = calcQuote(q);
+            return `
+              <article class="mobile-quote-row">
+                <button class="mobile-quote-title" data-quote-id="${q.id}">${esc(q.title || "Sem título")}</button>
+                <button class="mobile-quote-total" data-quote-id="${q.id}">${money(calc.total)}</button>
+                <div class="mobile-quote-meta">
+                  <button data-quote-id="${q.id}">${esc(displayQuoteCode(q.code))}</button>
+                  <span>${brDate(q.createdAt)}</span>
+                  ${client ? `<button data-client-id="${client.id}">${esc(client.name)}</button>` : `<span>Sem cliente</span>`}
+                </div>
+                <select class="mobile-quote-status" data-status-change="${q.id}">${statusOrder.map((s) => `<option value="${s}" ${q.status === s ? "selected" : ""}>${statusLabels[s]}</option>`).join("")}</select>
+                <div class="mobile-quote-actions">
+                  <button class="icon-action" title="Prévia PDF" data-action="preview-pdf" data-quote-id="${q.id}">▧</button>
+                  <button class="icon-action" title="Editar orçamento" data-action="edit-quote" data-quote-id="${q.id}">✎</button>
+                  <button class="icon-action danger" title="Excluir orçamento" data-delete-quote="${q.id}">🗑</button>
+                </div>
+              </article>
+            `;
+          }).join("")}
+        </div>
         <table>
           <thead><tr><th>Código</th><th>Projeto</th><th>Cliente</th><th>Status</th><th>Valor</th><th>Data</th><th class="right">Ações</th></tr></thead>
           <tbody>
@@ -1100,7 +1123,7 @@
               const calc = calcQuote(q);
               return `
                 <tr>
-                  <td data-label="Código"><button class="clickable" data-quote-id="${q.id}">${esc(displayQuoteCode(q.code))}</button></td>
+                  <td data-label="Código" data-mobile-date="${esc(brDate(q.createdAt))}"><button class="clickable" data-quote-id="${q.id}">${esc(displayQuoteCode(q.code))}</button></td>
                   <td data-label="Projeto"><button class="clickable" data-quote-id="${q.id}">${esc(q.title || "Sem título")}</button></td>
                   <td data-label="Cliente">${client ? `<button class="clickable" data-client-id="${client.id}">${esc(client.name)}</button>` : ""}</td>
                   <td data-label="Status"><select data-status-change="${q.id}">${statusOrder.map((s) => `<option value="${s}" ${q.status === s ? "selected" : ""}>${statusLabels[s]}</option>`).join("")}</select></td>
