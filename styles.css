@@ -5790,3 +5790,159 @@ select[data-status-change] {
   background: #ffffff !important;
   border-color: #d8e2f0 !important;
 }
+
+/* Mobile quote list: compact operational rows instead of oversized form cards. */
+@media (max-width: 760px) {
+  .quote-list-panel {
+    padding: 14px !important;
+  }
+
+  .quote-list-panel .panel-head {
+    margin-bottom: 10px !important;
+  }
+
+  .quote-table-wrap tbody {
+    gap: 8px !important;
+  }
+
+  .quote-table-wrap tr {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    grid-template-areas:
+      "code value"
+      "project project"
+      "client status"
+      "date actions" !important;
+    align-items: center !important;
+    grid-auto-rows: auto !important;
+    gap: 6px 10px !important;
+    padding: 10px 11px !important;
+    border-radius: 9px !important;
+  }
+
+  .quote-list-panel .quote-table-wrap td,
+  .quote-table-wrap td,
+  .quote-table-wrap td:not(.action-cell),
+  .quote-table-wrap td.action-cell {
+    display: flex !important;
+    width: auto !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    padding: 0 !important;
+    border: 0 !important;
+    grid-template-columns: none !important;
+    gap: 0 !important;
+    overflow: hidden !important;
+    line-height: 1.2 !important;
+  }
+
+  .quote-table-wrap td::before,
+  .quote-table-wrap td.action-cell::before {
+    display: none !important;
+    content: "" !important;
+  }
+
+  .quote-table-wrap td:nth-child(1) {
+    grid-area: code !important;
+  }
+
+  .quote-table-wrap td:nth-child(2) {
+    grid-area: project !important;
+  }
+
+  .quote-table-wrap td:nth-child(3) {
+    grid-area: client !important;
+  }
+
+  .quote-table-wrap td:nth-child(4) {
+    grid-area: status !important;
+    justify-content: flex-end !important;
+  }
+
+  .quote-table-wrap td:nth-child(5) {
+    grid-area: value !important;
+    justify-content: flex-end !important;
+  }
+
+  .quote-table-wrap td:nth-child(6) {
+    grid-area: date !important;
+    color: var(--muted) !important;
+    font-size: 0.72rem !important;
+    font-weight: 750 !important;
+  }
+
+  .quote-table-wrap td:nth-child(7) {
+    grid-area: actions !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    padding-top: 0 !important;
+  }
+
+  .quote-table-wrap td:nth-child(1) .clickable {
+    color: var(--muted) !important;
+    font-size: 0.74rem !important;
+    font-weight: 850 !important;
+  }
+
+  .quote-table-wrap td:nth-child(2) .clickable {
+    display: -webkit-box !important;
+    color: var(--ink) !important;
+    font-size: 0.9rem !important;
+    font-weight: 850 !important;
+    line-height: 1.15 !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+  }
+
+  .quote-table-wrap td:nth-child(3) .clickable {
+    display: block !important;
+    max-width: 150px !important;
+    color: var(--muted) !important;
+    font-size: 0.73rem !important;
+    font-weight: 750 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .quote-table-wrap td:nth-child(5) .clickable {
+    color: var(--ink) !important;
+    font-size: 0.88rem !important;
+    font-weight: 900 !important;
+    white-space: nowrap !important;
+  }
+
+  .quote-table-wrap select[data-status-change] {
+    width: auto !important;
+    min-width: 118px !important;
+    max-width: 150px !important;
+    min-height: 30px !important;
+    padding: 4px 28px 4px 8px !important;
+    font-size: 0.72rem !important;
+    font-weight: 800 !important;
+  }
+
+  .quote-table-wrap .icon-action {
+    width: 30px !important;
+    height: 30px !important;
+    min-width: 30px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .quote-table-wrap tr {
+    gap: 5px 8px !important;
+    padding: 9px 10px !important;
+  }
+
+  .quote-table-wrap td:nth-child(3) .clickable {
+    max-width: 128px !important;
+  }
+
+  .quote-table-wrap select[data-status-change] {
+    min-width: 108px !important;
+    max-width: 132px !important;
+  }
+}
