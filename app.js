@@ -714,9 +714,9 @@
         ${renderSidebar()}
         <main class="content">
           ${renderTopbar()}
+          ${renderMobileBar()}
           ${renderRoute()}
         </main>
-        ${renderMobileBar()}
       </div>
     `;
 
@@ -777,7 +777,7 @@
   function renderMobileBar() {
     return `
       <nav class="mobile-bar">
-        ${navItems().slice(0, 5).map((item) => `<button class="${state.route === item.route ? "active" : ""}" data-route="${item.route}">${item.short}</button>`).join("")}
+        ${navItems().map((item) => `<button class="${state.route === item.route ? "active" : ""}" data-route="${item.route}">${item.short}</button>`).join("")}
       </nav>
     `;
   }
@@ -802,6 +802,10 @@
     const initials = String(currentUser.name || currentUser.email || "A").trim().slice(0, 1).toUpperCase();
     return `
       <header class="topbar">
+        <button class="mobile-brand" data-route="dashboard" aria-label="Voltar para o painel">
+          <img src="./assets/logo-edj.png" alt="EDJ" />
+          <span>EDJ</span>
+        </button>
         ${back}
         <div class="actions topbar-actions">
           <button class="icon-btn" title="${state.theme === "dark" ? "Tema claro" : "Tema escuro"}" data-action="toggle-theme">☼</button>
@@ -991,7 +995,7 @@
 
   function renderClientTable(clients) {
     return `
-      <div class="table-wrap">
+      <div class="table-wrap mobile-card-table client-table-wrap">
         <table>
           <thead><tr><th>Cliente</th><th>Documento</th><th>Contato</th><th>Projetos</th><th>Financeiro</th><th></th></tr></thead>
           <tbody>
@@ -1000,12 +1004,12 @@
               const received = state.receivables.filter((r) => r.clientId === client.id && r.status === "recebido").reduce((s, r) => s + parseNum(r.amount), 0);
               return `
                 <tr>
-                  <td><button class="clickable" data-client-id="${client.id}">${esc(client.name)}</button></td>
-                  <td>${esc(client.document || "")}</td>
-                  <td>${esc(client.phone || client.email || "")}</td>
-                  <td>${quotes.length}</td>
-                  <td>${money(received)}</td>
-                  <td class="right action-cell">
+                  <td data-label="Cliente"><button class="clickable" data-client-id="${client.id}">${esc(client.name)}</button></td>
+                  <td data-label="Documento">${esc(client.document || "")}</td>
+                  <td data-label="Contato">${esc(client.phone || client.email || "")}</td>
+                  <td data-label="Projetos">${quotes.length}</td>
+                  <td data-label="Financeiro">${money(received)}</td>
+                  <td data-label="Ações" class="right action-cell">
                     <button class="icon-action" title="Editar cliente" data-edit-client="${client.id}">✎</button>
                     <button class="icon-action danger" title="Excluir cliente" data-delete-client="${client.id}">🗑</button>
                   </td>
@@ -1087,7 +1091,7 @@
 
   function renderQuoteTable(quotes) {
     return `
-      <div class="table-wrap">
+      <div class="table-wrap mobile-card-table quote-table-wrap">
         <table>
           <thead><tr><th>Código</th><th>Projeto</th><th>Cliente</th><th>Status</th><th>Valor</th><th>Data</th><th class="right">Ações</th></tr></thead>
           <tbody>
@@ -1096,13 +1100,13 @@
               const calc = calcQuote(q);
               return `
                 <tr>
-                  <td><button class="clickable" data-quote-id="${q.id}">${esc(displayQuoteCode(q.code))}</button></td>
-                  <td><button class="clickable" data-quote-id="${q.id}">${esc(q.title || "Sem título")}</button></td>
-                  <td>${client ? `<button class="clickable" data-client-id="${client.id}">${esc(client.name)}</button>` : ""}</td>
-                  <td><select data-status-change="${q.id}">${statusOrder.map((s) => `<option value="${s}" ${q.status === s ? "selected" : ""}>${statusLabels[s]}</option>`).join("")}</select></td>
-                  <td><button class="clickable" data-quote-id="${q.id}">${money(calc.total)}</button></td>
-                  <td>${brDate(q.createdAt)}</td>
-                  <td class="right action-cell">
+                  <td data-label="Código"><button class="clickable" data-quote-id="${q.id}">${esc(displayQuoteCode(q.code))}</button></td>
+                  <td data-label="Projeto"><button class="clickable" data-quote-id="${q.id}">${esc(q.title || "Sem título")}</button></td>
+                  <td data-label="Cliente">${client ? `<button class="clickable" data-client-id="${client.id}">${esc(client.name)}</button>` : ""}</td>
+                  <td data-label="Status"><select data-status-change="${q.id}">${statusOrder.map((s) => `<option value="${s}" ${q.status === s ? "selected" : ""}>${statusLabels[s]}</option>`).join("")}</select></td>
+                  <td data-label="Valor"><button class="clickable" data-quote-id="${q.id}">${money(calc.total)}</button></td>
+                  <td data-label="Data">${brDate(q.createdAt)}</td>
+                  <td data-label="Ações" class="right action-cell">
                     <button class="icon-action" title="Prévia PDF" data-action="preview-pdf" data-quote-id="${q.id}">▧</button>
                     <button class="icon-action" title="Editar orçamento" data-action="edit-quote" data-quote-id="${q.id}">✎</button>
                     <button class="icon-action danger" title="Excluir orçamento" data-delete-quote="${q.id}">🗑</button>
@@ -1243,7 +1247,7 @@
 
   function renderProjectTable(projects) {
     return `
-      <div class="table-wrap">
+      <div class="table-wrap mobile-card-table project-table-wrap">
         <table>
           <thead><tr><th>Projeto</th><th>Cliente</th><th>Status</th><th>Vendido</th><th>Gasto</th><th>Resultado</th></tr></thead>
           <tbody>
@@ -1252,12 +1256,12 @@
               const result = projectResult(p.id);
               return `
                 <tr>
-                  <td><button class="clickable" data-project-id="${p.id}">${esc(p.title)}</button></td>
-                  <td>${client ? `<button class="clickable" data-client-id="${client.id}">${esc(client.name)}</button>` : ""}</td>
-                  <td><select data-project-status-change="${p.id}">${statusOrder.map((s) => `<option value="${s}" ${p.status === s ? "selected" : ""}>${statusLabels[s]}</option>`).join("")}</select></td>
-                  <td>${p.quoteId ? `<button class="clickable" data-quote-id="${p.quoteId}">${money(result.sold)}</button>` : money(result.sold)}</td>
-                  <td>${money(result.costs)}</td>
-                  <td class="${result.profit < 0 ? "danger-text" : ""}">${money(result.profit)}</td>
+                  <td data-label="Projeto"><button class="clickable" data-project-id="${p.id}">${esc(p.title)}</button></td>
+                  <td data-label="Cliente">${client ? `<button class="clickable" data-client-id="${client.id}">${esc(client.name)}</button>` : ""}</td>
+                  <td data-label="Status"><select data-project-status-change="${p.id}">${statusOrder.map((s) => `<option value="${s}" ${p.status === s ? "selected" : ""}>${statusLabels[s]}</option>`).join("")}</select></td>
+                  <td data-label="Vendido">${p.quoteId ? `<button class="clickable" data-quote-id="${p.quoteId}">${money(result.sold)}</button>` : money(result.sold)}</td>
+                  <td data-label="Gasto">${money(result.costs)}</td>
+                  <td data-label="Resultado" class="${result.profit < 0 ? "danger-text" : ""}">${money(result.profit)}</td>
                 </tr>
               `;
             }).join("")}
@@ -1439,14 +1443,14 @@
 
   function renderReceivablesTable(rows = state.receivables) {
     return `
-      <div class="table-wrap">
+      <div class="table-wrap mobile-card-table receivable-table-wrap">
         <table>
           <thead><tr><th>Cliente</th><th>Descrição</th><th>Vencimento</th><th>Status</th><th>Valor</th><th class="right">Ações</th></tr></thead>
           <tbody>
             ${rows.map((r) => {
               const c = getClient(r.clientId);
               const description = r.quoteId ? `<button class="clickable" data-quote-id="${r.quoteId}">${esc(r.description)}</button>` : r.projectId ? `<button class="clickable" data-project-id="${r.projectId}">${esc(r.description)}</button>` : esc(r.description);
-              return `<tr><td>${c ? `<button class="clickable" data-client-id="${c.id}">${esc(c.name)}</button>` : ""}</td><td>${description}</td><td>${brDate(r.dueDate)}</td><td>${esc(r.status)}</td><td>${money(r.amount)}</td><td class="right action-cell">${r.status !== "recebido" ? `<button class="btn-secondary" data-receive="${r.id}">Receber</button>` : ""}<button class="icon-action" title="Editar conta" data-edit-receivable="${r.id}">✎</button><button class="icon-action danger" title="Excluir conta" data-delete-receivable="${r.id}">🗑</button></td></tr>`;
+              return `<tr><td data-label="Cliente">${c ? `<button class="clickable" data-client-id="${c.id}">${esc(c.name)}</button>` : ""}</td><td data-label="Descrição">${description}</td><td data-label="Vencimento">${brDate(r.dueDate)}</td><td data-label="Status">${esc(r.status)}</td><td data-label="Valor">${money(r.amount)}</td><td data-label="Ações" class="right action-cell">${r.status !== "recebido" ? `<button class="btn-secondary" data-receive="${r.id}">Receber</button>` : ""}<button class="icon-action" title="Editar conta" data-edit-receivable="${r.id}">✎</button><button class="icon-action danger" title="Excluir conta" data-delete-receivable="${r.id}">🗑</button></td></tr>`;
             }).join("")}
           </tbody>
         </table>
@@ -1456,11 +1460,11 @@
 
   function renderExpensesTable(rows = state.expenses) {
     return `
-      <div class="table-wrap">
+      <div class="table-wrap mobile-card-table expense-table-wrap">
         <table>
           <thead><tr><th>Categoria</th><th>Descrição</th><th>Tipo</th><th>Data</th><th>Valor</th><th class="right">Ações</th></tr></thead>
           <tbody>
-            ${rows.map((e) => `<tr><td>${esc(e.category)}</td><td>${esc(e.description)}</td><td>${e.fixed ? "Despesa fixa" : e.projectId ? "Custo de obra" : "Variável"}</td><td>${brDate(e.date || e.dueDate)}</td><td>${money(e.amount)}</td><td class="right action-cell"><button class="icon-action" title="Editar despesa" data-edit-expense="${e.id}">✎</button><button class="icon-action danger" title="Excluir despesa" data-delete-expense="${e.id}">🗑</button></td></tr>`).join("")}
+            ${rows.map((e) => `<tr><td data-label="Categoria">${esc(e.category)}</td><td data-label="Descrição">${esc(e.description)}</td><td data-label="Tipo">${e.fixed ? "Despesa fixa" : e.projectId ? "Custo de obra" : "Variável"}</td><td data-label="Data">${brDate(e.date || e.dueDate)}</td><td data-label="Valor">${money(e.amount)}</td><td data-label="Ações" class="right action-cell"><button class="icon-action" title="Editar despesa" data-edit-expense="${e.id}">✎</button><button class="icon-action danger" title="Excluir despesa" data-delete-expense="${e.id}">🗑</button></td></tr>`).join("")}
           </tbody>
         </table>
       </div>
@@ -1490,15 +1494,15 @@
   }
 
   function renderEmployeesTable() {
-    return `<div class="table-wrap"><table><thead><tr><th>Nome</th><th>Função</th><th>Valor diária</th><th>Status</th><th class="right">Ações</th></tr></thead><tbody>${state.employees.map((e) => `<tr><td>${esc(e.name)}</td><td>${esc(e.role)}</td><td>${money(e.dailyRate)}</td><td>${e.active ? "Ativo" : "Inativo"}</td><td class="right action-cell"><button class="icon-action" title="Editar colaborador" data-edit-employee="${e.id}">✎</button><button class="icon-action danger" title="Excluir colaborador" data-delete-employee="${e.id}">🗑</button></td></tr>`).join("")}</tbody></table></div>`;
+    return `<div class="table-wrap mobile-card-table employee-table-wrap"><table><thead><tr><th>Nome</th><th>Função</th><th>Valor diária</th><th>Status</th><th class="right">Ações</th></tr></thead><tbody>${state.employees.map((e) => `<tr><td data-label="Nome">${esc(e.name)}</td><td data-label="Função">${esc(e.role)}</td><td data-label="Valor diária">${money(e.dailyRate)}</td><td data-label="Status">${e.active ? "Ativo" : "Inativo"}</td><td data-label="Ações" class="right action-cell"><button class="icon-action" title="Editar colaborador" data-edit-employee="${e.id}">✎</button><button class="icon-action danger" title="Excluir colaborador" data-delete-employee="${e.id}">🗑</button></td></tr>`).join("")}</tbody></table></div>`;
   }
 
   function renderTimeTable() {
-    return `<div class="table-wrap"><table><thead><tr><th>Colaborador</th><th>Data</th><th>Normal</th><th>Extra 50%</th><th>Extra 100%</th><th>Obra</th><th class="right">Ações</th></tr></thead><tbody>${state.timeEntries.map((entry) => {
+    return `<div class="table-wrap mobile-card-table time-table-wrap"><table><thead><tr><th>Colaborador</th><th>Data</th><th>Normal</th><th>Extra 50%</th><th>Extra 100%</th><th>Obra</th><th class="right">Ações</th></tr></thead><tbody>${state.timeEntries.map((entry) => {
       const employee = state.employees.find((e) => e.id === entry.employeeId);
       const calc = calcTime(entry);
       const project = getProject(entry.projectId);
-      return `<tr><td>${esc(employee ? employee.name : "")}</td><td>${brDate(entry.date)}</td><td>${formatHours(calc.normal)}</td><td>${formatHours(calc.extra50)}</td><td>${formatHours(calc.extra100)}</td><td>${esc(project ? project.title : "")}</td><td class="right action-cell"><button class="icon-action danger" title="Excluir ponto" data-delete-time="${entry.id}">🗑</button></td></tr>`;
+      return `<tr><td data-label="Colaborador">${esc(employee ? employee.name : "")}</td><td data-label="Data">${brDate(entry.date)}</td><td data-label="Normal">${formatHours(calc.normal)}</td><td data-label="Extra 50%">${formatHours(calc.extra50)}</td><td data-label="Extra 100%">${formatHours(calc.extra100)}</td><td data-label="Obra">${esc(project ? project.title : "")}</td><td data-label="Ações" class="right action-cell"><button class="icon-action danger" title="Excluir ponto" data-delete-time="${entry.id}">🗑</button></td></tr>`;
     }).join("")}</tbody></table></div>`;
   }
 
@@ -1541,7 +1545,7 @@
   }
 
   function renderMaterialsTable() {
-    return `<div class="table-wrap"><table><thead><tr><th>Material</th><th>Unidade</th><th>Preço atual</th><th>Status</th><th class="right">Ações</th></tr></thead><tbody>${state.materials.map((m) => `<tr><td>${esc(m.name)}</td><td>${esc(m.unit)}</td><td>${money(m.price)}</td><td>${m.active === false ? "Inativo" : "Ativo"}</td><td class="right action-cell"><button class="icon-action" title="Editar material" data-edit-material="${m.id}">✎</button><button class="icon-action danger" title="Excluir material" data-delete-material="${m.id}">🗑</button></td></tr>`).join("")}</tbody></table></div>`;
+    return `<div class="table-wrap mobile-card-table material-table-wrap"><table><thead><tr><th>Material</th><th>Unidade</th><th>Preço atual</th><th>Status</th><th class="right">Ações</th></tr></thead><tbody>${state.materials.map((m) => `<tr><td data-label="Material">${esc(m.name)}</td><td data-label="Unidade">${esc(m.unit)}</td><td data-label="Preço atual">${money(m.price)}</td><td data-label="Status">${m.active === false ? "Inativo" : "Ativo"}</td><td data-label="Ações" class="right action-cell"><button class="icon-action" title="Editar material" data-edit-material="${m.id}">✎</button><button class="icon-action danger" title="Excluir material" data-delete-material="${m.id}">🗑</button></td></tr>`).join("")}</tbody></table></div>`;
   }
 
   function renderSettings() {
