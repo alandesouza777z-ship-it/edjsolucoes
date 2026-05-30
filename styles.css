@@ -6588,3 +6588,189 @@ select[data-status-change] {
     border-radius: 8px !important;
   }
 }
+
+/* Clean production polish */
+:root,
+body,
+button,
+input,
+select,
+textarea {
+  font-family: "Montserrat", "Segoe UI", Arial, Helvetica, sans-serif !important;
+}
+
+body {
+  background: var(--bg) !important;
+  letter-spacing: 0 !important;
+}
+
+.proposal-page,
+.proposal-page * {
+  font-family: Arial, Helvetica, sans-serif !important;
+}
+
+.search-control {
+  position: relative !important;
+  display: block !important;
+  width: 100% !important;
+  margin: 0 0 14px !important;
+}
+
+.search-control input {
+  min-height: 42px !important;
+  padding-left: 42px !important;
+  border-radius: 16px !important;
+  background: var(--surface-2) !important;
+}
+
+.search-control input:focus {
+  border-color: rgba(255, 122, 26, 0.68) !important;
+  box-shadow: 0 0 0 3px rgba(255, 122, 26, 0.13) !important;
+}
+
+.search-icon {
+  position: absolute !important;
+  left: 16px !important;
+  top: 50% !important;
+  z-index: 1 !important;
+  width: 14px !important;
+  height: 14px !important;
+  border: 2px solid var(--muted) !important;
+  border-radius: 999px !important;
+  transform: translateY(-50%) !important;
+  opacity: 0.78 !important;
+  pointer-events: none !important;
+}
+
+.search-icon::after {
+  content: "" !important;
+  position: absolute !important;
+  right: -6px !important;
+  bottom: -5px !important;
+  width: 7px !important;
+  height: 2px !important;
+  border-radius: 999px !important;
+  background: var(--muted) !important;
+  transform: rotate(45deg) !important;
+}
+
+.quote-step em {
+  font-style: normal !important;
+}
+
+@media (max-width: 760px) {
+  .quotes-page::before,
+  .quote-status-panel::after,
+  .quote-list-panel::after,
+  .mobile-quote-row::before {
+    display: none !important;
+  }
+
+  .quote-status-panel,
+  .quote-list-panel {
+    background: var(--surface) !important;
+    border-color: var(--line) !important;
+    box-shadow: 0 14px 28px rgba(2, 8, 23, 0.12) !important;
+  }
+
+  .status-chip {
+    background: var(--surface-2) !important;
+    box-shadow: none !important;
+  }
+
+  .mobile-quote-row {
+    background: var(--surface-2) !important;
+    border-color: var(--line) !important;
+    box-shadow: none !important;
+    animation: none !important;
+  }
+
+  .mobile-quote-meta {
+    color: var(--muted) !important;
+  }
+
+  .mobile-quote-status {
+    background-color: var(--surface) !important;
+    color: var(--ink) !important;
+    border-color: var(--line) !important;
+    box-shadow: none !important;
+  }
+
+  .quote-stepper {
+    display: grid !important;
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+    gap: 4px !important;
+    padding: 0 10px 10px !important;
+    overflow: visible !important;
+    scrollbar-width: auto !important;
+  }
+
+  .quote-stepper::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .quote-step {
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    gap: 4px !important;
+    padding: 0 !important;
+    font-size: 0.58rem !important;
+    line-height: 1 !important;
+    text-align: center !important;
+  }
+
+  .quote-step::after {
+    display: none !important;
+  }
+
+  .quote-step::before {
+    content: attr(data-step-short) !important;
+    order: 2 !important;
+    display: block !important;
+    width: 100% !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    color: currentColor !important;
+    font-weight: 800 !important;
+  }
+
+  .quote-step em {
+    display: none !important;
+  }
+
+  .quote-step span {
+    order: 1 !important;
+    width: 23px !important;
+    height: 23px !important;
+    margin: 0 auto !important;
+    font-size: 0.68rem !important;
+  }
+
+  .quote-wizard-modal .modal-head {
+    min-height: 52px !important;
+  }
+
+  .search-control {
+    margin-bottom: 10px !important;
+  }
+
+  .search-control input {
+    min-height: 38px !important;
+    border-radius: 14px !important;
+    font-size: 0.78rem !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .quote-step {
+    font-size: 0.51rem !important;
+  }
+
+  .quote-step span {
+    width: 21px !important;
+    height: 21px !important;
+  }
+}

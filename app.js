@@ -36,6 +36,9 @@
     activeQuoteTab: "summary",
     activeStatus: null,
     quotesStatusOpen: false,
+    quoteSearch: "",
+    clientSearch: "",
+    projectSearch: "",
     mobileMenuOpen: false,
     financePeriod: "month",
     financeStart: "",
@@ -619,6 +622,37 @@
     return String(code || "").replace(/^ORC-/i, "");
   }
 
+  function normalizeSearch(value) {
+    return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  }
+
+  function searchMatches(value, query) {
+    const needle = normalizeSearch(query);
+    return !needle || normalizeSearch(value).includes(needle);
+  }
+
+  function filterRenderedSearch(scope, query) {
+    const needle = normalizeSearch(query);
+    document.querySelectorAll(`[data-${scope}-search-row]`).forEach((row) => {
+      row.hidden = Boolean(needle) && !normalizeSearch(row.dataset.searchText).includes(needle);
+    });
+  }
+
+  function quoteSearchText(q) {
+    const client = getClient(q.clientId);
+    const calc = calcQuote(q);
+    return [displayQuoteCode(q.code), q.title, client && client.name, client && client.document, statusLabels[q.status], brDate(q.createdAt), money(calc.total)].filter(Boolean).join(" ");
+  }
+
+  function projectSearchText(project) {
+    const client = getClient(project.clientId);
+    return [project.title, client && client.name, statusLabels[project.status], displayQuoteCode(getQuote(project.quoteId)?.code)].filter(Boolean).join(" ");
+  }
+
+  function clientSearchText(client) {
+    return [client.name, client.document, client.phone, client.email, client.address].filter(Boolean).join(" ");
+  }
+
   function currentMonthRange() {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
@@ -1010,7 +1044,18 @@
     `;
   }
 
+  function renderSearchBox(scope, value, placeholder) {
+    return `
+      <label class="search-control" aria-label="${esc(placeholder)}">
+        <span class="search-icon" aria-hidden="true"></span>
+        <input data-search-scope="${esc(scope)}" value="${esc(value || "")}" placeholder="${esc(placeholder)}" autocomplete="off" />
+      </label>
+    `;
+  }
+
   function renderClients() {
+    const search = state.clientSearch || "";
+    const clients = state.clients.filter((client) => searchMatches(clientSearchText(client), search));
     return `
       <section class="grid">
         ${pageHeader("Clientes", `${state.clients.length} cliente(s) cadastrado(s).`, `<button class="btn" data-action="new-client">+ Novo cliente</button>`)}
@@ -1018,7 +1063,8 @@
           <div class="panel-head">
             <div><p class="eyebrow">Cadastro</p><h2>Clientes</h2></div>
           </div>
-          ${state.clients.length ? renderClientTable(state.clients) : empty("Nenhum cliente cadastrado.", "Cadastre um cliente para iniciar o histórico de orçamentos e projetos.")}
+          ${renderSearchBox("client", search, "Pesquisar cliente, CPF/CNPJ, telefone ou e-mail...")}
+          ${clients.length ? renderClientTable(clients) : empty("Nenhum cliente encontrado.", search ? "Ajuste a busca para ver outros cadastros." : "Cadastre um cliente para iniciar o histórico de orçamentos e projetos.")}
         </div>
       </section>
     `;
@@ -1034,7 +1080,7 @@
               const quotes = state.quotes.filter((q) => q.clientId === client.id);
               const received = state.receivables.filter((r) => r.clientId === client.id && r.status === "recebido").reduce((s, r) => s + parseNum(r.amount), 0);
               return `
-                <tr>
+                <tr data-client-search-row data-search-text="${esc(clientSearchText(client))}">
                   <td data-label="Cliente"><button class="clickable" data-client-id="${client.id}">${esc(client.name)}</button></td>
                   <td data-label="Documento">${esc(client.document || "")}</td>
                   <td data-label="Contato">${esc(client.phone || client.email || "")}</td>
@@ -1093,7 +1139,9 @@
   }
 
   function renderQuotes() {
-    const filtered = state.activeStatus ? state.quotes.filter((q) => q.status === state.activeStatus) : state.quotes;
+    const search = state.quoteSearch || "";
+    const statusFiltered = state.activeStatus ? state.quotes.filter((q) => q.status === state.activeStatus) : state.quotes;
+    const filtered = statusFiltered.filter((q) => searchMatches(quoteSearchText(q), search));
     const statusOpen = Boolean(state.quotesStatusOpen || state.activeStatus);
     const listTitle = state.activeStatus ? statusLabels[state.activeStatus] : "Todos os orçamentos";
     return `
@@ -1114,7 +1162,8 @@
             <div><p class="eyebrow">Lista</p><h2>${listTitle}</h2></div>
             ${state.activeStatus ? `<button class="btn-secondary" data-clear-status>Mostrar todos</button>` : ""}
           </div>
-          ${filtered.length ? renderQuoteTable(filtered) : empty("Nenhum orçamento encontrado.", "Não há orçamentos neste status.")}
+          ${renderSearchBox("quote", search, "Pesquisar por código, projeto, cliente ou status...")}
+          ${filtered.length ? renderQuoteTable(filtered) : empty("Nenhum orçamento encontrado.", search ? "Ajuste a busca para ver outros orçamentos." : "Não há orçamentos neste status.")}
         </section>
       </section>
     `;
@@ -1127,8 +1176,9 @@
           ${quotes.map((q) => {
             const client = getClient(q.clientId);
             const calc = calcQuote(q);
+            const searchText = quoteSearchText(q);
             return `
-              <article class="mobile-quote-row">
+              <article class="mobile-quote-row" data-quote-search-row data-search-text="${esc(searchText)}">
                 <button class="mobile-quote-title" data-quote-id="${q.id}">${esc(q.title || "Sem título")}</button>
                 <button class="mobile-quote-total" data-quote-id="${q.id}">${money(calc.total)}</button>
                 <div class="mobile-quote-meta">
@@ -1152,8 +1202,9 @@
             ${quotes.map((q) => {
               const client = getClient(q.clientId);
               const calc = calcQuote(q);
+              const searchText = quoteSearchText(q);
               return `
-                <tr>
+                <tr data-quote-search-row data-search-text="${esc(searchText)}">
                   <td data-label="Código" data-mobile-date="${esc(brDate(q.createdAt))}"><button class="clickable" data-quote-id="${q.id}">${esc(displayQuoteCode(q.code))}</button></td>
                   <td data-label="Projeto"><button class="clickable" data-quote-id="${q.id}">${esc(q.title || "Sem título")}</button></td>
                   <td data-label="Cliente">${client ? `<button class="clickable" data-client-id="${client.id}">${esc(client.name)}</button>` : ""}</td>
@@ -1288,12 +1339,15 @@
   }
 
   function renderProjects() {
+    const search = state.projectSearch || "";
+    const projects = state.projects.filter((project) => searchMatches(projectSearchText(project), search));
     return `
       <section class="grid">
         ${pageHeader("Projetos", `${state.projects.length} projeto(s) cadastrado(s).`)}
         <div class="panel">
           <div class="panel-head"><div><p class="eyebrow">Obras</p><h2>Projetos</h2></div></div>
-          ${state.projects.length ? renderProjectTable(state.projects) : empty("Nenhum projeto cadastrado.", "Aprove um orçamento para transformar em projeto.")}
+          ${renderSearchBox("project", search, "Pesquisar projeto, cliente, código ou status...")}
+          ${projects.length ? renderProjectTable(projects) : empty("Nenhum projeto encontrado.", search ? "Ajuste a busca para ver outras obras." : "Aprove um orçamento para transformar em projeto.")}
         </div>
       </section>
     `;
@@ -1308,8 +1362,9 @@
             ${projects.map((p) => {
               const client = getClient(p.clientId);
               const result = projectResult(p.id);
+              const searchText = projectSearchText(p);
               return `
-                <tr>
+                <tr data-project-search-row data-search-text="${esc(searchText)}">
                   <td data-label="Projeto"><button class="clickable" data-project-id="${p.id}">${esc(p.title)}</button></td>
                   <td data-label="Cliente">${client ? `<button class="clickable" data-client-id="${client.id}">${esc(client.name)}</button>` : ""}</td>
                   <td data-label="Status"><select data-project-status-change="${p.id}">${statusOrder.map((s) => `<option value="${s}" ${p.status === s ? "selected" : ""}>${statusLabels[s]}</option>`).join("")}</select></td>
@@ -1839,6 +1894,7 @@
 
     const q = existingId ? getQuote(existingId) : null;
     const steps = ["Cliente", "Projeto", "Materiais", "Custos", "Proposta", "Resumo"];
+    const shortSteps = ["Cliente", "Pedido", "Mat.", "Custos", "Prop.", "Resumo"];
     let currentStep = 0;
 
     openModal(`
@@ -1849,8 +1905,8 @@
         </div>
         <div class="quote-stepper">
           ${steps.map((step, index) => `
-            <button type="button" class="quote-step ${index === 0 ? "active" : ""}" data-wizard-step="${index}">
-              <span>${index < 5 ? "✓" : index + 1}</span>${esc(step)}
+            <button type="button" class="quote-step ${index === 0 ? "active" : ""}" data-wizard-step="${index}" data-step-short="${esc(shortSteps[index])}">
+              <span>${index < 5 ? "✓" : index + 1}</span><em>${esc(step)}</em>
             </button>
           `).join("")}
         </div>
@@ -3184,6 +3240,14 @@
     if (target.dataset.action === "export-time") exportTime();
     if (target.dataset.action === "preview-time-report") previewTimeReport();
     if (target.dataset.action === "export-receivables") exportReceivables();
+  });
+
+  document.addEventListener("input", (event) => {
+    const target = event.target;
+    if (!target.dataset || target.dataset.searchScope === undefined) return;
+    const scope = target.dataset.searchScope;
+    state[`${scope}Search`] = target.value;
+    filterRenderedSearch(scope, target.value);
   });
 
   document.addEventListener("change", (event) => {
