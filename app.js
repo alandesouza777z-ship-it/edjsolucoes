@@ -36,6 +36,7 @@
     activeQuoteTab: "summary",
     activeStatus: null,
     quotesStatusOpen: false,
+    mobileMenuOpen: false,
     financePeriod: "month",
     financeStart: "",
     financeEnd: "",
@@ -593,6 +594,10 @@
     return new Date(date + "T12:00:00").toLocaleDateString("pt-BR");
   }
 
+  function shortBrDate(date) {
+    return brDate(date).replace(/\/20(\d{2})$/, "/$1");
+  }
+
   function cityFromAddress(address) {
     const text = String(address || "");
     const match = text.match(/([^,\n]+?)\s*[-/]\s*[A-Z]{2}\b/i);
@@ -643,6 +648,7 @@
       if (routeHistory.length > 20) routeHistory = routeHistory.slice(-20);
     }
     state.route = route;
+    state.mobileMenuOpen = false;
     Object.assign(state, params);
     save();
     render();
@@ -776,9 +782,18 @@
 
   function renderMobileBar() {
     return `
-      <nav class="mobile-bar">
-        ${navItems().map((item) => `<button class="${state.route === item.route ? "active" : ""}" data-route="${item.route}">${item.short}</button>`).join("")}
-      </nav>
+      <div class="mobile-bar ${state.mobileMenuOpen ? "open" : ""}" aria-hidden="${state.mobileMenuOpen ? "false" : "true"}">
+        <button class="mobile-menu-backdrop" type="button" data-action="close-mobile-menu" aria-label="Fechar menu"></button>
+        <nav class="mobile-menu-panel" aria-label="Menu principal">
+          <div class="mobile-menu-head">
+            <img src="./assets/logo-edj.png" alt="EDJ" />
+            <div><strong>EDJ</strong><small>Navegação do sistema</small></div>
+          </div>
+          <div class="mobile-menu-grid">
+            ${navItems().map((item) => `<button class="${state.route === item.route ? "active" : ""}" data-route="${item.route}"><span>${item.icon}</span><strong>${item.label}</strong><small>${item.short}</small></button>`).join("")}
+          </div>
+        </nav>
+      </div>
     `;
   }
 
@@ -802,6 +817,9 @@
     const initials = String(currentUser.name || currentUser.email || "A").trim().slice(0, 1).toUpperCase();
     return `
       <header class="topbar">
+        <button class="mobile-menu-toggle" type="button" data-action="toggle-mobile-menu" aria-label="Abrir menu">
+          <span></span><span></span><span></span>
+        </button>
         <button class="mobile-brand" data-route="dashboard" aria-label="Voltar para o painel">
           <img src="./assets/logo-edj.png" alt="EDJ" />
           <span>EDJ</span>
@@ -809,7 +827,7 @@
         ${back}
         <div class="actions topbar-actions">
           <button class="icon-btn" title="${state.theme === "dark" ? "Tema claro" : "Tema escuro"}" data-action="toggle-theme">☼</button>
-          <button class="btn" data-action="new-quote">+ Novo orçamento</button>
+          <button class="btn topbar-new-quote" data-action="new-quote"><span class="desktop-label">+ Novo orçamento</span><span class="mobile-label">+ Novo</span></button>
           <div class="user-chip">
             <span class="avatar">${esc(initials)}</span>
             <span><strong>${esc(currentUser.name || "Administrador")}</strong><small>${esc(currentUser.email || "admin@serralheria.com")}</small></span>
@@ -841,6 +859,7 @@
     document.querySelectorAll("[data-route]").forEach((el) => {
       el.addEventListener("click", (event) => {
         event.preventDefault();
+        state.mobileMenuOpen = false;
         routeTo(el.dataset.route);
       });
     });
@@ -854,6 +873,18 @@
     document.querySelectorAll("[data-action='toggle-theme']").forEach((btn) => {
       btn.addEventListener("click", () => {
         setTheme(state.theme === "dark" ? "light" : "dark");
+        render();
+      });
+    });
+    document.querySelectorAll("[data-action='toggle-mobile-menu']").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.mobileMenuOpen = !state.mobileMenuOpen;
+        render();
+      });
+    });
+    document.querySelectorAll("[data-action='close-mobile-menu']").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.mobileMenuOpen = false;
         render();
       });
     });
@@ -1102,7 +1133,7 @@
                 <button class="mobile-quote-total" data-quote-id="${q.id}">${money(calc.total)}</button>
                 <div class="mobile-quote-meta">
                   <button data-quote-id="${q.id}">${esc(displayQuoteCode(q.code))}</button>
-                  <span>${brDate(q.createdAt)}</span>
+                  <span>${shortBrDate(q.createdAt)}</span>
                   ${client ? `<button data-client-id="${client.id}">${esc(client.name)}</button>` : `<span>Sem cliente</span>`}
                 </div>
                 <select class="mobile-quote-status" data-status-change="${q.id}">${statusOrder.map((s) => `<option value="${s}" ${q.status === s ? "selected" : ""}>${statusLabels[s]}</option>`).join("")}</select>

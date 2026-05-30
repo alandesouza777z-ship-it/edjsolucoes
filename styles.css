@@ -6130,3 +6130,461 @@ select[data-status-change] {
     min-width: 21px !important;
   }
 }
+
+.mobile-menu-toggle {
+  display: none;
+}
+
+.mobile-label {
+  display: none;
+}
+
+/* Executive mobile navigation and quote list finish. */
+@media (max-width: 760px) {
+  .topbar {
+    z-index: 80 !important;
+    box-shadow: 0 10px 26px rgba(2, 8, 23, 0.28) !important;
+  }
+
+  .mobile-menu-toggle {
+    display: inline-grid !important;
+    place-items: center !important;
+    flex: 0 0 34px !important;
+    width: 34px !important;
+    height: 34px !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 12px !important;
+    background: rgba(15, 26, 49, 0.86) !important;
+    color: var(--ink) !important;
+    cursor: pointer !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+  }
+
+  .mobile-menu-toggle span {
+    display: block !important;
+    width: 4px !important;
+    height: 4px !important;
+    margin: 1.5px 0 !important;
+    border-radius: 999px !important;
+    background: currentColor !important;
+  }
+
+  .topbar-new-quote {
+    max-width: 92px !important;
+    padding-inline: 12px !important;
+  }
+
+  .topbar-new-quote .desktop-label {
+    display: none !important;
+  }
+
+  .topbar-new-quote .mobile-label {
+    display: inline !important;
+  }
+
+  .topbar-back {
+    min-width: 34px !important;
+    width: 34px !important;
+    height: 34px !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    position: relative !important;
+    text-indent: -999px !important;
+  }
+
+  .topbar-back::before {
+    content: "←" !important;
+    position: absolute !important;
+    inset: 0 !important;
+    display: grid !important;
+    place-items: center !important;
+    text-indent: 0 !important;
+    font-size: 0.95rem !important;
+  }
+
+  .mobile-bar {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 70 !important;
+    display: block !important;
+    width: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    pointer-events: none !important;
+  }
+
+  .mobile-menu-backdrop {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background:
+      linear-gradient(180deg, rgba(7, 12, 22, 0.12), rgba(7, 12, 22, 0.58)),
+      rgba(2, 6, 14, 0.42) !important;
+    opacity: 0 !important;
+    transition: opacity 180ms ease !important;
+  }
+
+  .mobile-menu-panel {
+    position: absolute !important;
+    top: 52px !important;
+    left: 8px !important;
+    right: 8px !important;
+    display: grid !important;
+    gap: 10px !important;
+    padding: 12px !important;
+    border: 1px solid var(--line-strong) !important;
+    border-radius: 20px !important;
+    background:
+      linear-gradient(135deg, rgba(255, 122, 26, 0.09), transparent 34%),
+      var(--surface) !important;
+    box-shadow: 0 24px 70px rgba(2, 8, 23, 0.5) !important;
+    transform: translateY(-10px) scale(0.985) !important;
+    transform-origin: top center !important;
+    opacity: 0 !important;
+    transition: transform 180ms cubic-bezier(.2,.8,.2,1), opacity 160ms ease !important;
+  }
+
+  .mobile-bar.open {
+    pointer-events: auto !important;
+  }
+
+  .mobile-bar.open .mobile-menu-backdrop {
+    opacity: 1 !important;
+  }
+
+  .mobile-bar.open .mobile-menu-panel {
+    opacity: 1 !important;
+    transform: translateY(0) scale(1) !important;
+  }
+
+  .mobile-menu-head {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 4px 4px 10px !important;
+    border-bottom: 1px solid var(--line) !important;
+  }
+
+  .mobile-menu-head img {
+    width: 34px !important;
+    height: 34px !important;
+    border-radius: 10px !important;
+    background: #fff !important;
+    padding: 3px !important;
+    object-fit: contain !important;
+  }
+
+  .mobile-menu-head strong,
+  .mobile-menu-head small {
+    display: block !important;
+  }
+
+  .mobile-menu-head strong {
+    color: var(--ink) !important;
+    font-size: 0.88rem !important;
+    font-weight: 900 !important;
+  }
+
+  .mobile-menu-head small {
+    color: var(--muted) !important;
+    font-size: 0.68rem !important;
+    font-weight: 700 !important;
+  }
+
+  .mobile-menu-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .mobile-menu-grid button {
+    display: grid !important;
+    justify-items: start !important;
+    align-content: center !important;
+    min-width: 0 !important;
+    min-height: 66px !important;
+    padding: 10px !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 16px !important;
+    background: var(--surface-2) !important;
+    color: var(--ink) !important;
+    text-align: left !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+    transition: transform 160ms ease, border-color 160ms ease, background 160ms ease !important;
+  }
+
+  .mobile-menu-grid button span {
+    color: var(--orange) !important;
+    font-size: 0.85rem !important;
+    line-height: 1 !important;
+  }
+
+  .mobile-menu-grid button strong {
+    max-width: 100% !important;
+    margin-top: 7px !important;
+    color: var(--ink) !important;
+    font-size: 0.71rem !important;
+    font-weight: 900 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .mobile-menu-grid button small {
+    margin-top: 2px !important;
+    color: var(--muted) !important;
+    font-size: 0.58rem !important;
+    font-weight: 800 !important;
+  }
+
+  .mobile-menu-grid button.active {
+    border-color: rgba(255, 122, 26, 0.72) !important;
+    background: linear-gradient(135deg, rgba(255, 122, 26, 0.2), rgba(255, 122, 26, 0.03)), var(--surface-2) !important;
+  }
+
+  .mobile-menu-grid button:active {
+    transform: scale(0.985) !important;
+  }
+
+  .quotes-page {
+    position: relative !important;
+  }
+
+  .quotes-page::before {
+    content: "" !important;
+    position: fixed !important;
+    inset: 52px 0 auto 0 !important;
+    height: 180px !important;
+    pointer-events: none !important;
+    background:
+      linear-gradient(120deg, rgba(255, 122, 26, 0.16), transparent 34%),
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 48px) !important;
+    opacity: 0.5 !important;
+    mask-image: linear-gradient(to bottom, #000, transparent) !important;
+  }
+
+  .quote-status-panel,
+  .quote-list-panel {
+    position: relative !important;
+    overflow: hidden !important;
+    border-radius: 22px !important;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.035), transparent 52%),
+      var(--surface) !important;
+    box-shadow: 0 18px 44px rgba(2, 8, 23, 0.18) !important;
+  }
+
+  .quote-status-panel::after,
+  .quote-list-panel::after {
+    content: "" !important;
+    position: absolute !important;
+    inset: 0 !important;
+    border-radius: inherit !important;
+    pointer-events: none !important;
+    background: linear-gradient(120deg, rgba(255, 122, 26, 0.12), transparent 28%, transparent 74%, rgba(87, 132, 255, 0.08)) !important;
+    opacity: 0.58 !important;
+  }
+
+  .quote-status-panel > *,
+  .quote-list-panel > * {
+    position: relative !important;
+    z-index: 1 !important;
+  }
+
+  .quote-status-toggle {
+    min-height: 44px !important;
+  }
+
+  .quote-status-toggle > span {
+    border-radius: 999px !important;
+    padding: 7px 9px !important;
+    background: var(--surface-2) !important;
+    border: 1px solid var(--line) !important;
+  }
+
+  .quote-status-strip {
+    gap: 7px !important;
+  }
+
+  .status-chip {
+    border-radius: 14px !important;
+    background: rgba(6, 13, 27, 0.38) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.035) !important;
+  }
+
+  .mobile-quote-list-native {
+    gap: 6px !important;
+  }
+
+  .mobile-quote-row {
+    position: relative !important;
+    min-height: 61px !important;
+    padding: 8px 9px !important;
+    border-radius: 20px !important;
+    background:
+      linear-gradient(135deg, rgba(255, 122, 26, 0.075), transparent 42%),
+      linear-gradient(180deg, rgba(255,255,255,0.035), transparent),
+      #091225 !important;
+    border-color: rgba(56, 74, 116, 0.86) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.045), 0 8px 20px rgba(2, 8, 23, 0.18) !important;
+    animation: quoteRowIn 260ms cubic-bezier(.2,.8,.2,1) both !important;
+    transition: transform 160ms ease, border-color 160ms ease, background 160ms ease !important;
+  }
+
+  .mobile-quote-row::before {
+    content: "" !important;
+    position: absolute !important;
+    inset: 8px auto 8px 0 !important;
+    width: 3px !important;
+    border-radius: 999px !important;
+    background: var(--orange) !important;
+    opacity: 0.85 !important;
+  }
+
+  .mobile-quote-row:active {
+    transform: scale(0.992) !important;
+    border-color: rgba(255, 122, 26, 0.62) !important;
+  }
+
+  .mobile-quote-title {
+    padding-left: 4px !important;
+    font-size: 0.8rem !important;
+    letter-spacing: 0 !important;
+  }
+
+  .mobile-quote-total {
+    font-size: 0.78rem !important;
+    font-weight: 950 !important;
+  }
+
+  .mobile-quote-meta {
+    padding-left: 4px !important;
+    color: #9fb0c9 !important;
+  }
+
+  .mobile-quote-status {
+    height: 27px !important;
+    border-radius: 999px !important;
+    border-color: rgba(74, 95, 143, 0.88) !important;
+    background-color: rgba(17, 30, 56, 0.96) !important;
+    color: #f6f8fc !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05) !important;
+  }
+
+  .mobile-quote-actions .icon-action {
+    color: #dce7ff !important;
+    background: rgba(255,255,255,0.035) !important;
+  }
+
+  .mobile-quote-actions .icon-action.danger {
+    color: #ff5b68 !important;
+  }
+
+  :root:not(.dark) .mobile-menu-toggle {
+    background: #ffffff !important;
+    color: #0d1626 !important;
+  }
+
+  :root:not(.dark) .mobile-menu-backdrop {
+    background: rgba(15, 23, 42, 0.26) !important;
+  }
+
+  :root:not(.dark) .quote-status-panel,
+  :root:not(.dark) .quote-list-panel {
+    background:
+      linear-gradient(180deg, rgba(255, 122, 26, 0.035), transparent 52%),
+      #ffffff !important;
+    box-shadow: 0 18px 44px rgba(15, 23, 42, 0.08) !important;
+  }
+
+  :root:not(.dark) .status-chip {
+    background: #ffffff !important;
+  }
+
+  :root:not(.dark) .mobile-quote-row {
+    background:
+      linear-gradient(135deg, rgba(255, 122, 26, 0.08), transparent 42%),
+      linear-gradient(180deg, #ffffff, #f8fbff) !important;
+    border-color: #d8e2f0 !important;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.055) !important;
+  }
+
+  :root:not(.dark) .mobile-quote-status {
+    color: #0d1626 !important;
+    background-color: #ffffff !important;
+    border-color: #d8e2f0 !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .mobile-menu-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .mobile-quote-row {
+    border-radius: 18px !important;
+  }
+}
+
+@keyframes quoteRowIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 760px) {
+  .mobile-quote-list-native {
+    gap: 5px !important;
+  }
+
+  .mobile-quote-row {
+    min-height: 52px !important;
+    padding: 6px 8px !important;
+    gap: 2px 6px !important;
+    border-radius: 18px !important;
+  }
+
+  .mobile-quote-title {
+    font-size: 0.74rem !important;
+    line-height: 1 !important;
+  }
+
+  .mobile-quote-total {
+    font-size: 0.72rem !important;
+  }
+
+  .mobile-quote-meta {
+    font-size: 0.56rem !important;
+  }
+
+  .mobile-quote-status {
+    width: 84px !important;
+    min-width: 84px !important;
+    max-width: 84px !important;
+    min-height: 22px !important;
+    height: 22px !important;
+    padding: 1px 18px 1px 7px !important;
+    font-size: 0.55rem !important;
+  }
+
+  .mobile-quote-actions .icon-action {
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+    border-radius: 8px !important;
+  }
+}
