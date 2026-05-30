@@ -5713,3 +5713,26 @@ select[data-status-change] {
     width: 142px !important;
   }
 }
+
+/* Light theme polish: keep dashboard project rows readable and closer to native app cards. */
+:root:not(.dark) .compact-row {
+  background: linear-gradient(180deg, #ffffff 0%, #f7faff 100%) !important;
+  border-color: #d8e2f0 !important;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.055) !important;
+}
+
+:root:not(.dark) .compact-row:hover {
+  border-color: rgba(255, 122, 26, 0.42) !important;
+  background: #ffffff !important;
+}
+
+:root:not(.dark) .compact-row,
+:root:not(.dark) .compact-row .compact-title,
+:root:not(.dark) .compact-row .clickable,
+:root:not(.dark) .compact-row strong {
+  color: #0d1626 !important;
+}
+
+:root:not(.dark) .compact-row span {
+  color: #526176 !important;
+}
